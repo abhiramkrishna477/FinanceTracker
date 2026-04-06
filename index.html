@@ -77,6 +77,7 @@
         input, select, textarea { width: 100%; background: var(--bg-input); border: 1px solid transparent; color: white; padding: 14px; border-radius: 12px; font-family: inherit; font-size: 0.95rem; outline: none; transition: 0.2s;}
         input:focus, select:focus, textarea:focus { border-color: var(--primary); }
         input[readonly] { background: rgba(0, 0, 0, 0.1); color: var(--text-muted); }
+        input::placeholder { color: rgba(255, 255, 255, 0.2); }
         
         .form-group { margin-bottom: 16px; }
         .form-group label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; font-weight: 500; }
@@ -386,7 +387,7 @@
                 </div>
             </div>
 
-            <!-- ACTUALS TAB (Updated with splits) -->
+            <!-- ACTUALS TAB -->
             <div id="tab-content-act" style="display: none;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                     <h2 style="margin:0;">Production Spend (COGS)</h2>
@@ -403,6 +404,7 @@
                 
                 <div class="btn-group">
                     <button class="btn-save btn-action" onclick="saveProjectData('ACT')">Sync Actuals</button>
+                    <button class="btn-action" style="background: transparent; border: 1px dashed var(--danger); color: var(--danger); font-size: 0.85rem; padding: 12px;" onclick="clearAllActuals()">Reset & Clear All Actuals</button>
                 </div>
             </div>
         </div>
@@ -648,7 +650,6 @@
                 }
 
                 const { data: clients, error: errC } = await supabaseClient.from('clients').select('*');
-                // Make sure to query description for splits mapping
                 const { data: projects, error: errP } = await supabaseClient.from('projects').select('*, expenses(id, category_name, amount, actual_amount, description), payments(*)');
 
                 if (errC) {
@@ -778,6 +779,7 @@
 
                 if (p.expenses) {
                     p.expenses.forEach(e => {
+                        // Null actual amounts evaluate to 0, completely fixing the graph bug!
                         projSpent += (Number(e.actual_amount) || 0);
                     });
                 }
@@ -1214,13 +1216,6 @@
                 });
             }
 
-            const hasAnyActuals = Object.values(state.expensesMap).some(x => x.actual > 0 || (x.subItems && x.subItems.length > 0));
-            if (!hasAnyActuals) {
-                Object.keys(state.expensesMap).forEach(k => {
-                    if (state.expensesMap[k].actual === 0) state.expensesMap[k].actual = null;
-                });
-            }
-
             setCategory(p.category || 'PROMOTIONAL', false);
             document.getElementById('inp-date').value = p.date || '';
             document.getElementById('inp-days').value = p.days || 1;
@@ -1444,7 +1439,7 @@
             updateGlobalDashboard();
         }
 
-        // --- ACTUALS TAB LOGIC (Updated for Splits & Unexpected Names) ---
+        // --- ACTUALS TAB LOGIC ---
         async function addUnexpectedExpense() {
             let rawName = await customPrompt("Enter the name of the unexpected expense (e.g., Damaged Prop):");
             if (rawName === null) return;
@@ -1473,6 +1468,7 @@
                 const subItems = state.expensesMap[cat].subItems || [];
                 const isSplit = subItems.length > 0;
                 
+                // Revert back to using the estimate for the math if actual is empty
                 if (act === null || act === undefined) {
                     act = isSplit ? subItems.reduce((s, i) => s + (Number(i.amount)||0), 0) : est; 
                 }
@@ -1497,7 +1493,7 @@
             }
             state.expensesMap[cat].subItems.push({ name: '', amount: 0 });
             recalcActualTotal(cat);
-            renderActualsExpenses(); // Re-render needed here because we are structurally adding a new row
+            renderActualsExpenses();
         }
 
         function updateSubItemName(cat, idx, val) {
@@ -1513,7 +1509,7 @@
         function deleteSubItem(cat, idx) {
             state.expensesMap[cat].subItems.splice(idx, 1);
             recalcActualTotal(cat);
-            renderActualsExpenses(); // Re-render needed here because we are structurally removing a row
+            renderActualsExpenses();
         }
 
         function recalcActualTotal(cat) {
@@ -1522,7 +1518,6 @@
                 const total = subs.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
                 state.expensesMap[cat].actual = total;
                 
-                // Live update the parent category's readonly input directly, without destroying the DOM
                 const safeCat = cat.replace(/[^a-zA-Z0-9]/g, '_');
                 const baseInput = document.getElementById(`act-input-${safeCat}`);
                 if (baseInput) baseInput.value = total;
@@ -1547,19 +1542,18 @@
                 const subItems = state.expensesMap[cat].subItems || [];
                 const isSplit = subItems.length > 0;
                 
-                if (act === null || act === undefined) {
-                    act = isSplit ? subItems.reduce((s, i) => s + (Number(i.amount)||0), 0) : est; 
-                    state.expensesMap[cat].actual = act;
+                // Default the visual display to the estimate if it's currently null
+                let displayAct = act;
+                if (displayAct === null || displayAct === undefined) {
+                    displayAct = isSplit ? subItems.reduce((s, i) => s + (Number(i.amount)||0), 0) : est; 
                 }
 
-                if (est > 0 || act > 0 || isSplit || state.customRows.includes(cat)) {
+                if (est > 0 || displayAct !== null || isSplit || state.customRows.includes(cat)) {
                     
-                    // Main Row Wrapping
                     const mainWrap = document.createElement('div');
                     
                     const row = document.createElement('div');
                     row.className = 'expense-row actual-mode';
-                    // Remove bottom margin if we have sub items so they connect visually
                     if (isSplit) row.style.marginBottom = '0';
                     
                     let labelHtml = `<div>
@@ -1575,9 +1569,11 @@
                     let splitBtn = `<button class="btn-split" onclick="addSubItem('${cat}')">⑆ Split</button>`;
                     
                     const safeCat = cat.replace(/[^a-zA-Z0-9]/g, '_');
+                    
+                    // The value is directly set to displayAct (which falls back to estimate)
                     let actualInputHtml = isSplit ? 
-                        `<input type="number" id="act-input-${safeCat}" class="expense-input" value="${act}" readonly style="color: var(--warning); opacity: 0.6;" title="Calculated from splits">` : 
-                        `<input type="number" id="act-input-${safeCat}" class="expense-input" value="${act}" oninput="updateActualMap('${cat}', this.value)" style="color: var(--warning);">`;
+                        `<input type="number" id="act-input-${safeCat}" class="expense-input" value="${displayAct}" readonly style="color: var(--warning); opacity: 0.6;" title="Calculated from splits">` : 
+                        `<input type="number" id="act-input-${safeCat}" class="expense-input" value="${displayAct}" oninput="updateActualMap('${cat}', this.value)" style="color: var(--warning);">`;
 
                     row.innerHTML = `
                         ${labelHtml}
@@ -1589,7 +1585,6 @@
                     `;
                     mainWrap.appendChild(row);
 
-                    // Sub-items rendering
                     if (isSplit) {
                         const subContainer = document.createElement('div');
                         subContainer.className = 'sub-expense-container';
@@ -1620,13 +1615,29 @@
 
         function updateActualMap(cat, val) {
             if(!state.expensesMap[cat]) state.expensesMap[cat] = {id:null, estimate:0, actual:null, subItems:[]};
-            state.expensesMap[cat].actual = Number(val) || 0;
-            updateActualsTotals(); // Math updates ONLY, no layout re-rendering. Keeps your cursor active!
+            // Map empty strings back to null
+            state.expensesMap[cat].actual = val === '' ? null : Number(val);
+            updateActualsTotals();
             markDirty();
         }
 
+        async function clearAllActuals() {
+            if (!(await customConfirm("Are you sure you want to revert? This will reset all actual spent amounts to zero."))) return;
+
+            Object.keys(state.expensesMap).forEach(cat => {
+                state.expensesMap[cat].actual = null;
+                state.expensesMap[cat].subItems = [];
+            });
+
+            renderActualsExpenses();
+            updateActualsTotals();
+            
+            // Pass 'CLEAR' as the tab source so it bypasses the auto-fill logic in saveProjectData
+            await saveProjectData('CLEAR', "Actuals reverted successfully! 🗑️");
+        }
+
         // --- UNIFIED SAVE LOGIC ---
-        async function saveProjectData(tabSource) {
+        async function saveProjectData(tabSource, successMsg = "Project Data Synced!") {
             const p = state.selectedProject;
             if (!p) return;
             
@@ -1638,6 +1649,15 @@
             }
 
             const totalVal = Number(document.getElementById('inp-total-val').value) || 0;
+            
+            // Only if the user explicitly clicked "Sync Actuals" do we formalize the default visual estimates into permanent Actuals
+            if (tabSource === 'ACT') {
+                for (let cat in state.expensesMap) {
+                    if (state.expensesMap[cat].actual === null && (!state.expensesMap[cat].subItems || state.expensesMap[cat].subItems.length === 0)) {
+                        state.expensesMap[cat].actual = state.expensesMap[cat].estimate;
+                    }
+                }
+            }
             
             await supabaseClient.from('projects').update({
                 date: dateVal,
@@ -1654,15 +1674,28 @@
             p.date = dateVal;
             p.month_name = monthName;
 
+            const updatedExpenses = []; // Create a fresh local array to drop the graph instantly
+
             for (let cat in state.expensesMap) {
                 const data = state.expensesMap[cat];
-                if (data.estimate > 0 || data.actual > 0 || (data.subItems && data.subItems.length > 0)) {
+                
+                if (data.estimate > 0 || data.actual !== null || (data.subItems && data.subItems.length > 0)) {
                     if (data.id) {
                         await supabaseClient.from('expenses').update({ 
                             amount: data.estimate, 
                             actual_amount: data.actual,
-                            description: JSON.stringify(data.subItems) // Saved as JSON string in existing text column
+                            description: JSON.stringify(data.subItems)
                         }).eq('id', data.id);
+                        
+                        // Push to our local list so the app doesn't rely on a stale DB state
+                        updatedExpenses.push({
+                            id: data.id,
+                            project_id: p.id,
+                            category_name: cat,
+                            amount: data.estimate,
+                            actual_amount: data.actual,
+                            description: JSON.stringify(data.subItems)
+                        });
                     } else {
                         const { data: inserted } = await supabaseClient.from('expenses').insert({
                             project_id: p.id, 
@@ -1671,16 +1704,24 @@
                             actual_amount: data.actual,
                             description: JSON.stringify(data.subItems)
                         }).select();
-                        if (inserted && inserted.length > 0) data.id = inserted[0].id;
+                        if (inserted && inserted.length > 0) {
+                            data.id = inserted[0].id;
+                            updatedExpenses.push(inserted[0]);
+                        }
                     }
-                } else if (data.id && data.estimate === 0 && data.actual === 0 && (!data.subItems || data.subItems.length === 0)) {
+                } else if (data.id && data.estimate === 0 && (data.actual === null || data.actual === 0) && (!data.subItems || data.subItems.length === 0)) {
                      await supabaseClient.from('expenses').delete().eq('id', data.id);
                      data.id = null;
                 }
             }
 
+            // Sync the local project state with the exact database truth we just saved
+            p.expenses = updatedExpenses; 
+
             state.isDirty = false;
-            showToast("Project Data Synced!");
+            showToast(successMsg);
+            
+            // Now when the dashboard updates, it will reliably calculate based on the wiped actuals
             updateGlobalDashboard();
         }
 
