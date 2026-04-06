@@ -1873,7 +1873,8 @@
             const projectMap = {}; 
             
             state.dbProjects.forEach(p => {
-                if (p.status === 'Dropped' || !p.date) return;
+                // Ignore dropped and estimated projects from the calendar view
+                if (p.status === 'Dropped' || p.status === 'Estimate' || !p.date) return;
                 
                 const parts = p.date.split('-');
                 if (parts.length !== 3) return;
