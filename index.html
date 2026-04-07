@@ -212,6 +212,19 @@
                         <h4>TOTAL BOOKED REVENUE</h4>
                         <p id="dash-rev-booked" style="font-size: 2.2rem; color: var(--text-main);">₹0</p>
                     </div>
+
+                    <!-- NEW: Net Profit and Total Spend Row -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.15); padding: 12px; border-radius: 12px; margin-bottom: 10px;">
+                        <div class="stat-item">
+                            <h4 style="color: var(--info);">NET PROFIT</h4>
+                            <p id="dash-net-profit" style="font-size: 1.2rem; color: var(--info);">₹0</p>
+                        </div>
+                        <div class="stat-item" style="text-align: right;">
+                            <h4 style="color: var(--danger);">TOTAL SPEND</h4>
+                            <p id="dash-total-spent" style="font-size: 1.2rem; color: var(--danger); margin: 0;">₹0</p>
+                        </div>
+                    </div>
+
                     <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.15); padding: 12px; border-radius: 12px;">
                         <div class="stat-item">
                             <h4 style="color: var(--success);">AMOUNT RECEIVED</h4>
@@ -359,16 +372,22 @@
 
                 <div class="split-branch">
                     <div class="branch-item">
-                        <div style="color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">Advance (60%)</div>
-                        <h3 id="val-advance" style="margin: 8px 0; font-size: 1.3rem;">₹0</h3>
+                        <div id="lbl-adv-pct" style="color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">Advance (60%)</div>
+                        <div style="display: flex; justify-content: center; align-items: center; gap: 2px; margin: 8px 0;">
+                            <span style="font-size: 1.1rem; font-weight: 700; color: var(--text-main);">₹</span>
+                            <input type="number" id="inp-advance-val" style="font-size: 1.3rem; font-weight: 700; color: var(--text-main); width: 90px; padding: 4px; text-align: center; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 8px; outline: none;" oninput="handleAdvanceEdit()" onchange="saveProjectData('REV')">
+                        </div>
                         <div class="status-circles">
                             <button class="circle-btn cross" id="btn-adv-pend" onclick="setPaymentStatus('Advance', 'Pending')">✖</button>
                             <button class="circle-btn tick" id="btn-adv-rec" onclick="setPaymentStatus('Advance', 'Received')">✔</button>
                         </div>
                     </div>
                     <div class="branch-item">
-                        <div style="color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">Balance (40%)</div>
-                        <h3 id="val-balance" style="margin: 8px 0; font-size: 1.3rem;">₹0</h3>
+                        <div id="lbl-bal-pct" style="color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">Balance (40%)</div>
+                        <div style="display: flex; justify-content: center; align-items: center; gap: 2px; margin: 8px 0;">
+                            <span style="font-size: 1.1rem; font-weight: 700; color: var(--text-main);">₹</span>
+                            <input type="number" id="inp-balance-val" style="font-size: 1.3rem; font-weight: 700; color: var(--text-main); width: 90px; padding: 4px; text-align: center; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 8px; outline: none;" oninput="handleBalanceEdit()" onchange="saveProjectData('REV')">
+                        </div>
                         <div class="status-circles">
                             <button class="circle-btn cross" id="btn-bal-pend" onclick="setPaymentStatus('Balance', 'Pending')">✖</button>
                             <button class="circle-btn tick" id="btn-bal-rec" onclick="setPaymentStatus('Balance', 'Received')">✔</button>
@@ -413,6 +432,14 @@
         <div id="view-analytics" class="view">
             <h1 style="margin-bottom: 4px;">Yearly Overview</h1>
             <div style="color: var(--text-muted); font-weight: 500; font-size: 0.9rem; margin-bottom: 24px;">Business Growth & Trends</div>
+
+            <!-- Profit Chart -->
+            <div class="chart-card">
+                <h2 style="margin-bottom: 10px;">Profit Growth (Net)</h2>
+                <div style="position: relative; height: 200px; width: 100%;">
+                    <canvas id="profitChart"></canvas>
+                </div>
+            </div>
 
             <!-- Growth Chart visualization -->
             <div class="chart-card">
@@ -544,7 +571,8 @@
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0cHNudWZ5Y29taG96c2llZ2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5OTI5NjAsImV4cCI6MjA3NzU2ODk2MH0.SsKcUAjkv4gsTKawOfN-KKzYRkUKoQZj-JZDo8liggc";
         var supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        const baseCategories = ["Director", "Cinematographer", "Equipments Rent", "Food & Travel", "Other Crew", "Editors", "Props & Costume"];
+        // ADDED ACTORS HERE
+        const baseCategories = ["Director", "Cinematographer", "Actors", "Equipments Rent", "Food & Travel", "Other Crew", "Editors", "Props & Costume"];
         const monthsList = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
         const state = {
@@ -577,6 +605,34 @@
         let dashboardChartInstance = null; 
         let projectChartInstance = null;
         let expensePieChartInstance = null;
+        let profitChartInstance = null;
+        let autosaveTimer = null; // New autosave timer
+
+        function triggerAutosave() {
+            clearTimeout(autosaveTimer);
+            autosaveTimer = setTimeout(async () => {
+                if (state.isDirty && state.selectedProject) {
+                    const currentTabEl = document.querySelector('.toggle-option.active');
+                    const currentTab = currentTabEl ? currentTabEl.id.replace('tab-btn-', '').toUpperCase() : 'EST';
+                    await saveProjectData(currentTab, "Autosaved successfully! 💾");
+                }
+            }, 5000);
+        }
+
+        // Custom helpers for dynamic Advance/Balance tracking
+        function getProjectAdvance(p) {
+            const total = Number(p?.total_value) || 0;
+            const advPay = p?.payments?.find(pay => pay.type === 'Advance');
+            if (advPay && advPay.expected_amount > 0) return advPay.expected_amount;
+            return total * 0.60;
+        }
+
+        function getProjectBalance(p) {
+            const total = Number(p?.total_value) || 0;
+            const balPay = p?.payments?.find(pay => pay.type === 'Balance');
+            if (balPay && balPay.expected_amount > 0) return balPay.expected_amount;
+            return total * 0.40;
+        }
 
         Chart.defaults.color = '#94a3b8';
         Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
@@ -747,12 +803,13 @@
             let totalReceived = 0;
             let currentPending = 0;
             let previousPending = 0;
+            let totalSpent = 0; // Added for profit calculation
             
             const dashMonth = document.getElementById('global-month-filter').value;
             const dashMonthIdx = monthsList.indexOf(dashMonth);
 
-            let monthlyData = { rev: {}, cogs: {}, booked: {} }; 
-            monthsList.forEach(m => { monthlyData.rev[m] = 0; monthlyData.cogs[m] = 0; monthlyData.booked[m] = 0; });
+            let monthlyData = { rev: {}, cogs: {}, booked: {}, profit: {} }; 
+            monthsList.forEach(m => { monthlyData.rev[m] = 0; monthlyData.cogs[m] = 0; monthlyData.booked[m] = 0; monthlyData.profit[m] = 0; });
             
             let categorySpendEst = {};
             let categorySpendAct = {};
@@ -770,7 +827,7 @@
                 if (p.payments) {
                     p.payments.forEach(pay => {
                         if (pay.status === 'Received') {
-                            projReceived += pay.type === 'Advance' ? (projVal * 0.60) : (projVal * 0.40);
+                            projReceived += pay.type === 'Advance' ? getProjectAdvance(p) : getProjectBalance(p);
                         }
                     });
                 }
@@ -779,7 +836,8 @@
 
                 if (p.expenses) {
                     p.expenses.forEach(e => {
-                        // Null actual amounts evaluate to 0, completely fixing the graph bug!
+                        // Skip the company cut from "Spend" calculation as per request
+                        if (e.category_name === 'Company Cut') return;
                         projSpent += (Number(e.actual_amount) || 0);
                     });
                 }
@@ -789,12 +847,14 @@
                         monthlyData.rev[p.month_name] += projReceived; 
                         monthlyData.cogs[p.month_name] += projSpent;
                         monthlyData.booked[p.month_name] += projVal;
+                        monthlyData.profit[p.month_name] += (projVal - projSpent);
                     }
 
                     if (dashMonth === 'All' || p.month_name === dashMonth) {
                         totalBookedRev += projVal;
                         totalReceived += projReceived;
                         currentPending += projPending;
+                        totalSpent += projSpent; // Aggregating total spend
 
                         if (p.expenses) {
                             p.expenses.forEach(e => {
@@ -821,6 +881,7 @@
             });
 
             const totalPendingDisplay = currentPending + previousPending;
+            const netProfit = totalBookedRev - totalSpent; // Profit Calculation
 
             state.pieDataEst = categorySpendEst;
             state.pieDataAct = categorySpendAct;
@@ -828,6 +889,9 @@
             document.getElementById('dash-rev-booked').innerText = formatINR(totalBookedRev);
             document.getElementById('dash-rev-received').innerText = formatINR(totalReceived);
             document.getElementById('dash-rev-pending').innerText = formatINR(totalPendingDisplay > 0 ? totalPendingDisplay : 0);
+            
+            document.getElementById('dash-net-profit').innerText = formatINR(netProfit);
+            document.getElementById('dash-total-spent').innerText = formatINR(totalSpent);
 
             const prevTextEl = document.getElementById('dash-rev-previous');
             if (previousPending > 0 && dashMonth !== 'All') {
@@ -840,6 +904,7 @@
             renderExpensePieChart();
             renderChart(monthlyData);
             renderProjectChart(monthlyData);
+            renderProfitChart(monthlyData);
         }
 
         function switchPieView(view) {
@@ -999,6 +1064,45 @@
             });
         }
 
+        function renderProfitChart(dataObj) {
+            const ctx = document.getElementById('profitChart').getContext('2d');
+            const labels = monthsList.map(m => m.substring(0,3));
+            const profitData = monthsList.map(m => dataObj.profit[m]);
+
+            if (profitChartInstance) profitChartInstance.destroy();
+
+            profitChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Net Profit',
+                        data: profitData,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#10b981'
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: {
+                        y: { 
+                            grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false },
+                            ticks: { callback: function(value) { return '₹' + (value/1000) + 'k'; } }
+                        },
+                        x: { grid: { display: false, drawBorder: false } }
+                    },
+                    plugins: {
+                        legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8, color: '#94a3b8' } },
+                        tooltip: { callbacks: { label: function(context) { return 'Profit: ' + formatINR(context.raw); } } }
+                    }
+                }
+            });
+        }
+
         // ============================================================
         // VIEW 2: MONTHS TIMELINE
         // ============================================================
@@ -1055,16 +1159,52 @@
                 const clientProjects = filteredProjects.filter(p => p.client_id === c.id);
                 const count = clientProjects.length;
                 let clientRev = 0;
+                let clientReceived = 0;
+                let clientSpent = 0;
+                
                 clientProjects.forEach(cp => {
-                    if(cp.status === 'Confirmed' || cp.status === 'Completed') clientRev += (Number(cp.total_value)||0);
+                    if(cp.status === 'Confirmed' || cp.status === 'Completed') {
+                        const pVal = Number(cp.total_value) || 0;
+                        clientRev += pVal;
+                        
+                        if (cp.payments) {
+                            cp.payments.forEach(pay => {
+                                if (pay.status === 'Received') {
+                                    clientReceived += pay.type === 'Advance' ? getProjectAdvance(cp) : getProjectBalance(cp);
+                                }
+                            });
+                        }
+
+                        if (cp.expenses) {
+                            cp.expenses.forEach(e => {
+                                if (e.category_name === 'Company Cut') return;
+                                clientSpent += (Number(e.actual_amount) || 0);
+                            });
+                        }
+                    }
                 });
+
+                const clientPending = clientRev - clientReceived;
+                const clientProfit = clientRev - clientSpent;
+
+                const profitColor = clientProfit >= 0 ? '#86efac' : '#fca5a5';
+                const profitSign = clientProfit >= 0 ? '+' : '-';
+                const formattedClientProfit = formatINR(Math.abs(clientProfit));
 
                 const div = document.createElement('div');
                 div.className = 'card';
                 div.innerHTML = `
                     <div class="client-clickable" style="flex: 1;">
                         <div style="font-weight:600; font-size:1.05rem;">${c.name}</div>
-                        <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">${count} Projects • <span style="font-weight:600; color:var(--text-main);">${formatINR(clientRev)}</span></div>
+                        <div style="font-size:0.8rem; color:var(--text-muted); margin-top:4px;">
+                            ${count} Projects • <span style="font-weight:600; color:var(--text-main);">${formatINR(clientRev)}</span>
+                        </div>
+                        <div style="font-size:0.75rem; margin-top:6px; display: flex; gap: 10px; flex-wrap: wrap;">
+                            <span style="color: var(--success); font-weight: 600;">Rec: ${formatINR(clientReceived)}</span>
+                            <span style="color: var(--warning); font-weight: 600;">Bal: ${formatINR(clientPending)}</span>
+                            <span style="color: var(--danger); font-weight: 600;">Spend: ${formatINR(clientSpent)}</span>
+                            <span style="color: ${profitColor}; font-weight: 700;">Profit: ${profitSign}${formattedClientProfit}</span>
+                        </div>
                     </div>
                     <div style="display:flex; align-items:center; gap:8px;">
                         <button class="btn-del" style="color: var(--text-muted); font-size: 1rem;" onclick="event.stopPropagation(); renameClient('${c.id}', '${c.name.replace(/'/g, "\\'")}')">✏️</button>
@@ -1110,11 +1250,26 @@
                 if (p.payments) {
                     p.payments.forEach(pay => {
                         if (pay.status === 'Received') {
-                            projReceived += pay.type === 'Advance' ? (totalVal * 0.60) : (totalVal * 0.40);
+                            projReceived += pay.type === 'Advance' ? getProjectAdvance(p) : getProjectBalance(p);
                         }
                     });
                 }
                 const projPending = totalVal - projReceived;
+
+                let projSpent = 0;
+                if (p.expenses) {
+                    p.expenses.forEach(e => {
+                        if (e.category_name !== 'Company Cut') {
+                            projSpent += (Number(e.actual_amount) || 0);
+                        }
+                    });
+                }
+
+                const projProfit = totalVal - projSpent;
+                const profitColor = projProfit >= 0 ? '#86efac' : '#fca5a5';
+                const profitSign = projProfit >= 0 ? '+' : '-';
+                const formattedProfit = formatINR(Math.abs(projProfit));
+                const profitDisplayHtml = `<div style="font-size: 0.75rem; color: ${profitColor}; font-weight: 700; margin-top: 4px;">Profit: ${profitSign}${formattedProfit}</div>`;
 
                 let revStatusHtml = '';
                 if (status === 'Confirmed' || status === 'Completed') {
@@ -1142,6 +1297,7 @@
                     <div style="text-align:right;">
                         <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600;">VALUE</div>
                         <div style="font-weight:800; color:var(--text-main); font-size: 1.1rem;">${formatINR(totalVal)}</div>
+                        ${profitDisplayHtml}
                         ${revStatusHtml}
                     </div>`;
                 div.onclick = () => { openProjectDetails(p, 'REV'); };
@@ -1375,7 +1531,10 @@
             updateTextPreview(grand);
         }
 
-        function markDirty() { state.isDirty = true; }
+        function markDirty() { 
+            state.isDirty = true; 
+            triggerAutosave();
+        }
 
         function updateTextPreview(total) {
             const p = state.selectedProject;
@@ -1390,10 +1549,54 @@
         // --- REVENUE TAB LOGIC ---
         function calculateSplits() {
             const total = Number(document.getElementById('inp-total-val').value) || 0;
-            document.getElementById('val-advance').innerText = formatINR(total * 0.60);
-            document.getElementById('val-balance').innerText = formatINR(total * 0.40);
+            const p = state.selectedProject;
+            
+            let advAmt = getProjectAdvance(p);
+            let balAmt = getProjectBalance(p);
+            let oldTotal = advAmt + balAmt;
+            
+            let advPct = oldTotal > 0 ? (advAmt / oldTotal) : 0.60;
+            
+            const newAdv = Math.round(total * advPct);
+            const newBal = total - newAdv;
+            
+            document.getElementById('inp-advance-val').value = newAdv;
+            document.getElementById('inp-balance-val').value = newBal;
+            
+            updateSplitLabels(total, newAdv, newBal);
+            
             renderActualsExpenses(); 
             updatePaymentUI(); 
+            markDirty();
+        }
+
+        function handleAdvanceEdit() {
+            const total = Number(document.getElementById('inp-total-val').value) || 0;
+            let adv = Number(document.getElementById('inp-advance-val').value) || 0;
+            if (adv > total) { adv = total; document.getElementById('inp-advance-val').value = adv; }
+            const bal = total - adv;
+            document.getElementById('inp-balance-val').value = bal;
+            updateSplitLabels(total, adv, bal);
+            updatePaymentUI();
+            markDirty();
+        }
+
+        function handleBalanceEdit() {
+            const total = Number(document.getElementById('inp-total-val').value) || 0;
+            let bal = Number(document.getElementById('inp-balance-val').value) || 0;
+            if (bal > total) { bal = total; document.getElementById('inp-balance-val').value = bal; }
+            const adv = total - bal;
+            document.getElementById('inp-advance-val').value = adv;
+            updateSplitLabels(total, adv, bal);
+            updatePaymentUI();
+            markDirty();
+        }
+
+        function updateSplitLabels(total, adv, bal) {
+            const advPct = total > 0 ? Math.round((adv / total) * 100) : 60;
+            const balPct = total > 0 ? Math.round((bal / total) * 100) : 40;
+            document.getElementById('lbl-adv-pct').innerText = `Advance (${advPct}%)`;
+            document.getElementById('lbl-bal-pct').innerText = `Balance (${balPct}%)`;
         }
 
         function updatePaymentUI() {
@@ -1401,19 +1604,21 @@
             
             let totalReceived = 0;
             const totalInvoice = Number(document.getElementById('inp-total-val').value) || 0;
+            const advAmt = Number(document.getElementById('inp-advance-val').value) || 0;
+            const balAmt = Number(document.getElementById('inp-balance-val').value) || 0;
 
             state.currentPayments.forEach(pay => {
                 if (pay.type === 'Advance') {
                     if (pay.status === 'Received') {
                         document.getElementById('btn-adv-rec').classList.add('active');
-                        totalReceived += (totalInvoice * 0.60);
+                        totalReceived += advAmt;
                     }
                     else document.getElementById('btn-adv-pend').classList.add('active');
                 }
                 if (pay.type === 'Balance') {
                     if (pay.status === 'Received') {
                         document.getElementById('btn-bal-rec').classList.add('active');
-                        totalReceived += (totalInvoice * 0.40);
+                        totalReceived += balAmt;
                     }
                     else document.getElementById('btn-bal-pend').classList.add('active');
                 }
@@ -1425,12 +1630,13 @@
         }
 
         async function setPaymentStatus(type, status) {
+            const amt = type === 'Advance' ? Number(document.getElementById('inp-advance-val').value) : Number(document.getElementById('inp-balance-val').value);
             let existing = state.currentPayments.find(p => p.type === type);
             if (existing) {
                 existing.status = status;
-                await supabaseClient.from('payments').update({ status }).eq('id', existing.id);
+                await supabaseClient.from('payments').update({ status, expected_amount: amt }).eq('id', existing.id);
             } else {
-                const newPay = { project_id: state.selectedProject.id, type, status, expected_amount: 0 };
+                const newPay = { project_id: state.selectedProject.id, type, status, expected_amount: amt || 0 };
                 const { data } = await supabaseClient.from('payments').insert(newPay).select();
                 if(data && data.length) state.currentPayments.push(data[0]);
             }
@@ -1463,14 +1669,16 @@
         function updateActualsTotals() {
             let totalEst = 0; let totalAct = 0;
             Object.keys(state.expensesMap).forEach(cat => {
+                if (cat === 'Company Cut') return; // Skip company cut from actuals totally
+
                 const est = state.expensesMap[cat].estimate || 0;
                 let act = state.expensesMap[cat].actual;
                 const subItems = state.expensesMap[cat].subItems || [];
                 const isSplit = subItems.length > 0;
                 
-                // Revert back to using the estimate for the math if actual is empty
-                if (act === null || act === undefined) {
-                    act = isSplit ? subItems.reduce((s, i) => s + (Number(i.amount)||0), 0) : est; 
+                // Do not fallback to estimate. Actual is what we explicitly type, otherwise 0
+                if (act === null || act === undefined || act === '') {
+                    act = isSplit ? subItems.reduce((s, i) => s + (Number(i.amount)||0), 0) : 0; 
                 }
                 totalEst += est; 
                 totalAct += act;
@@ -1537,18 +1745,20 @@
             });
 
             sortedKeys.forEach(cat => {
+                if (cat === 'Company Cut') return; // Completely hide Company Cut from actuals
+
                 const est = state.expensesMap[cat].estimate || 0;
                 let act = state.expensesMap[cat].actual;
                 const subItems = state.expensesMap[cat].subItems || [];
                 const isSplit = subItems.length > 0;
                 
-                // Default the visual display to the estimate if it's currently null
+                // Allow empty inputs natively
                 let displayAct = act;
                 if (displayAct === null || displayAct === undefined) {
-                    displayAct = isSplit ? subItems.reduce((s, i) => s + (Number(i.amount)||0), 0) : est; 
+                    displayAct = isSplit ? subItems.reduce((s, i) => s + (Number(i.amount)||0), 0) : ''; 
                 }
 
-                if (est > 0 || displayAct !== null || isSplit || state.customRows.includes(cat)) {
+                if (est > 0 || displayAct !== '' || isSplit || state.customRows.includes(cat)) {
                     
                     const mainWrap = document.createElement('div');
                     
@@ -1570,7 +1780,6 @@
                     
                     const safeCat = cat.replace(/[^a-zA-Z0-9]/g, '_');
                     
-                    // The value is directly set to displayAct (which falls back to estimate)
                     let actualInputHtml = isSplit ? 
                         `<input type="number" id="act-input-${safeCat}" class="expense-input" value="${displayAct}" readonly style="color: var(--warning); opacity: 0.6;" title="Calculated from splits">` : 
                         `<input type="number" id="act-input-${safeCat}" class="expense-input" value="${displayAct}" oninput="updateActualMap('${cat}', this.value)" style="color: var(--warning);">`;
@@ -1615,7 +1824,7 @@
 
         function updateActualMap(cat, val) {
             if(!state.expensesMap[cat]) state.expensesMap[cat] = {id:null, estimate:0, actual:null, subItems:[]};
-            // Map empty strings back to null
+            // Map empty strings explicitly back to null
             state.expensesMap[cat].actual = val === '' ? null : Number(val);
             updateActualsTotals();
             markDirty();
@@ -1632,7 +1841,6 @@
             renderActualsExpenses();
             updateActualsTotals();
             
-            // Pass 'CLEAR' as the tab source so it bypasses the auto-fill logic in saveProjectData
             await saveProjectData('CLEAR', "Actuals reverted successfully! 🗑️");
         }
 
@@ -1658,6 +1866,31 @@
                     }
                 }
             }
+
+            if (tabSource === 'REV') {
+                const advVal = Number(document.getElementById('inp-advance-val').value) || 0;
+                const balVal = Number(document.getElementById('inp-balance-val').value) || 0;
+                
+                if (!p.payments) p.payments = [];
+                
+                let advPay = p.payments.find(x => x.type === 'Advance');
+                if (advPay) {
+                    await supabaseClient.from('payments').update({ expected_amount: advVal }).eq('id', advPay.id);
+                    advPay.expected_amount = advVal;
+                } else {
+                    const { data } = await supabaseClient.from('payments').insert({ project_id: p.id, type: 'Advance', status: 'Pending', expected_amount: advVal }).select();
+                    if (data && data.length) p.payments.push(data[0]);
+                }
+
+                let balPay = p.payments.find(x => x.type === 'Balance');
+                if (balPay) {
+                    await supabaseClient.from('payments').update({ expected_amount: balVal }).eq('id', balPay.id);
+                    balPay.expected_amount = balVal;
+                } else {
+                    const { data } = await supabaseClient.from('payments').insert({ project_id: p.id, type: 'Balance', status: 'Pending', expected_amount: balVal }).select();
+                    if (data && data.length) p.payments.push(data[0]);
+                }
+            }
             
             await supabaseClient.from('projects').update({
                 date: dateVal,
@@ -1674,7 +1907,7 @@
             p.date = dateVal;
             p.month_name = monthName;
 
-            const updatedExpenses = []; // Create a fresh local array to drop the graph instantly
+            const updatedExpenses = []; 
 
             for (let cat in state.expensesMap) {
                 const data = state.expensesMap[cat];
@@ -1687,7 +1920,6 @@
                             description: JSON.stringify(data.subItems)
                         }).eq('id', data.id);
                         
-                        // Push to our local list so the app doesn't rely on a stale DB state
                         updatedExpenses.push({
                             id: data.id,
                             project_id: p.id,
@@ -1715,13 +1947,11 @@
                 }
             }
 
-            // Sync the local project state with the exact database truth we just saved
             p.expenses = updatedExpenses; 
 
             state.isDirty = false;
             showToast(successMsg);
             
-            // Now when the dashboard updates, it will reliably calculate based on the wiped actuals
             updateGlobalDashboard();
         }
 
@@ -1750,12 +1980,11 @@
                 const advPay = p.payments ? p.payments.find(pay => pay.type === 'Advance') : null;
                 const balPay = p.payments ? p.payments.find(pay => pay.type === 'Balance') : null;
                 
-                const advAmt = totalVal * 0.60;
-                const balAmt = totalVal * 0.40;
+                const advAmt = getProjectAdvance(p);
+                const balAmt = getProjectBalance(p);
                 const isAdvReceived = advPay && advPay.status === 'Received';
                 const isBalReceived = balPay && balPay.status === 'Received';
 
-                // Sync with Dashboard Filter Logic for Pendings ONLY
                 const pMonthIdx = monthsList.indexOf(p.month_name);
                 const isCurrentMonthOrAll = (dashMonth === 'All' || p.month_name === dashMonth);
                 
@@ -1765,9 +1994,7 @@
                 
                 const isPastPending = (dashMonth !== 'All' && pMonthIdx < dashMonthIdx && pendAmt > 0);
 
-                // Process Advance
                 if (isAdvReceived) {
-                    // SHOW ALL TIME RECEIVED (Ignore isCurrentMonthOrAll restriction)
                     totalReceived += advAmt;
                     receivedHtml += createPaymentCard(p, clientName, 'Advance', advAmt, true);
                 } else if ((isCurrentMonthOrAll || isPastPending) && (advAmt > 0 || p.status === 'Confirmed')) {
@@ -1775,9 +2002,7 @@
                     pendingHtml += createPaymentCard(p, clientName, 'Advance', advAmt, false);
                 }
 
-                // Process Balance
                 if (isBalReceived) {
-                    // SHOW ALL TIME RECEIVED
                     totalReceived += balAmt;
                     receivedHtml += createPaymentCard(p, clientName, 'Balance', balAmt, true);
                 } else if ((isCurrentMonthOrAll || isPastPending) && balAmt > 0 && isAdvReceived) {
@@ -1810,6 +2035,8 @@
 
         function createPaymentCard(project, clientName, type, amount, isReceived) {
             const color = isReceived ? 'var(--success)' : 'var(--warning)';
+            const totalVal = Number(project.total_value) || 0;
+            const pct = totalVal > 0 ? Math.round((amount / totalVal) * 100) : (type === 'Advance' ? 60 : 40);
             
             let actionBtn = '';
             let lockDateNote = '';
@@ -1830,7 +2057,7 @@
             <div style="background: var(--bg-card); border: 1px solid ${cardBorder}; box-shadow: ${cardShadow}; border-radius: 16px; padding: 16px; display: flex; justify-content: space-between; align-items: flex-start; transition: 0.2s;">
                 <div>
                     <div style="font-weight: 700; font-size: 1.05rem; margin-bottom: 4px;">${project.name}</div>
-                    <div style="font-size: 0.8rem; color: var(--text-muted);">${clientName} • ${type} ( ${type === 'Advance' ? '60%' : '40%'} )</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">${clientName} • ${type} ( ${pct}% )</div>
                     ${lockDateNote}
                     <div style="margin-top: 4px;">${actionBtn}</div>
                 </div>
@@ -1844,14 +2071,16 @@
             const p = state.dbProjects.find(proj => String(proj.id) === String(projectId));
             if (!p) return;
 
+            const amt = type === 'Advance' ? getProjectAdvance(p) : getProjectBalance(p);
+
             if(!p.payments) p.payments = [];
             let existing = p.payments.find(pay => pay.type === type);
             
             if (existing) {
                 existing.status = 'Received';
-                await supabaseClient.from('payments').update({ status: 'Received' }).eq('id', existing.id);
+                await supabaseClient.from('payments').update({ status: 'Received', expected_amount: amt }).eq('id', existing.id);
             } else {
-                const newPay = { project_id: projectId, type: type, status: 'Received', expected_amount: 0 };
+                const newPay = { project_id: projectId, type: type, status: 'Received', expected_amount: amt };
                 const { data } = await supabaseClient.from('payments').insert(newPay).select();
                 if(data && data.length) p.payments.push(data[0]);
             }
@@ -1873,7 +2102,6 @@
             const projectMap = {}; 
             
             state.dbProjects.forEach(p => {
-                // Ignore dropped and estimated projects from the calendar view
                 if (p.status === 'Dropped' || p.status === 'Estimate' || !p.date) return;
                 
                 const parts = p.date.split('-');
