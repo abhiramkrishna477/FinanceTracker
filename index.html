@@ -213,7 +213,6 @@
                         <p id="dash-rev-booked" style="font-size: 2.2rem; color: var(--text-main);">₹0</p>
                     </div>
 
-                    <!-- NEW: Net Profit and Total Spend Row -->
                     <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.15); padding: 12px; border-radius: 12px; margin-bottom: 10px;">
                         <div class="stat-item">
                             <h4 style="color: var(--info);">NET PROFIT</h4>
@@ -362,6 +361,13 @@
 
             <!-- REVENUE TAB -->
             <div id="tab-content-rev" style="display: none;">
+                
+                <!-- GST ADDITION BAR -->
+                <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom: 12px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 12px; border: 1px dashed var(--border);">
+                    <div style="font-size: 0.85rem; color: var(--text-muted);">Grand Total Est: <br><span id="rev-display-est-grand" style="color:var(--text-main); font-weight:800; font-size: 1.1rem;">₹0</span></div>
+                    <button id="btn-gst-toggle" onclick="toggleGST()" style="background: rgba(16, 185, 129, 0.15); border: 1px solid var(--success); color: var(--success); border-radius: 8px; padding: 8px 12px; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: 0.2s;">+ Include 18% GST</button>
+                </div>
+
                 <div class="total-amount-box">
                     <div style="color: var(--text-muted); font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Total Invoice Value</div>
                     <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
@@ -370,6 +376,7 @@
                     </div>
                 </div>
 
+                <!-- RESTORED: Split Branch UI -->
                 <div class="split-branch">
                     <div class="branch-item">
                         <div id="lbl-adv-pct" style="color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">Advance (60%)</div>
@@ -396,12 +403,33 @@
                 </div>
 
                 <!-- Payment Summary Box -->
-                <div class="calc-card" style="margin-top: 30px; padding: 16px;">
+                <div class="calc-card" style="margin-top: 20px; padding: 16px;">
                     <div class="calc-row total" style="border: none; padding: 0; margin: 0;">
-                        <span>Amount Received:</span><span id="val-total-received" style="color: var(--success);">₹0</span>
+                        <span>Total Received:</span><span id="val-total-received" style="color: var(--success);">₹0</span>
                     </div>
                     <div class="calc-row" style="margin-top: 8px; margin-bottom: 0;">
                         <span>Pending Balance:</span><span id="val-total-pending" style="color: var(--warning);">₹0</span>
+                    </div>
+                </div>
+
+                <!-- NEW: Record Payment -->
+                <div style="margin-top: 24px; background: rgba(0,0,0,0.15); border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
+                    <h3 style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0; margin-bottom: 12px; text-transform: uppercase;">Record Payment</h3>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="date" id="inp-pay-date" style="flex: 1;" title="Payment Date">
+                        <div class="expense-input-wrapper" style="flex: 1; border: 1px solid var(--border); background: var(--bg-input);">
+                            <span style="color: var(--success);">₹</span>
+                            <input type="number" id="inp-pay-amount" placeholder="Amount" style="color: var(--success); font-weight: 700;">
+                        </div>
+                        <button onclick="addPaymentRecord()" style="background: var(--success); color: white; border: none; padding: 12px 16px; border-radius: 10px; font-weight: 700; cursor: pointer; transition: 0.2s;">Add</button>
+                    </div>
+                </div>
+
+                <!-- NEW: Payment Breakdown Table -->
+                <div id="revenue-history-container" style="margin-top: 24px;">
+                    <h3 style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px;">Payment History</h3>
+                    <div id="revenue-history-list" style="background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden;">
+                        <!-- Populated via JS -->
                     </div>
                 </div>
             </div>
@@ -415,14 +443,62 @@
                 <div id="act-expenses-container"></div>
                 <button class="btn-add-expense" onclick="addUnexpectedExpense()">+ Add Unexpected Expense</button>
 
-                <div class="calc-card">
-                    <div class="calc-row"><span>Total Estimated</span><span id="val-act-est-total" style="color: var(--text-muted);">₹0</span></div>
-                    <div class="calc-row"><span>Total Actual Spent</span><span id="val-act-spent-total" style="color: var(--warning);">₹0</span></div>
-                    <div class="calc-row total"><span style="font-size: 0.95rem; text-transform: uppercase;">Budget Variance</span><span id="val-realized-profit">₹0</span></div>
+                <!-- Unified Summary & Variance Card -->
+                <div class="calc-card" style="margin-bottom: 24px; padding: 16px;">
+                    <!-- Top Actual Spent -->
+                    <div class="calc-row" style="margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border);">
+                        <span style="color: var(--text-main); font-weight: 700; font-size: 1.1rem;">Total Actual Spent</span>
+                        <span id="val-act-spent-total" style="color: var(--warning); font-weight: 800; font-size: 1.4rem;">₹0</span>
+                    </div>
+
+                    <!-- Estimation Breakdown -->
+                    <div class="calc-row" style="margin-bottom: 10px;">
+                        <div style="display:flex; flex-direction:column;">
+                            <span style="color: var(--text-main); font-weight: 600;">Estimated Subtotal</span>
+                        </div>
+                        <span id="act-breakdown-sub" style="font-weight: 600;">₹0</span>
+                    </div>
+                    <div class="calc-row" style="margin-bottom: 10px;">
+                        <div style="display:flex; flex-direction:column;">
+                            <span>Miscellaneous</span>
+                            <span id="act-breakdown-misc-note" style="font-size:0.7rem; color:var(--text-muted);">Amount added (10%)</span>
+                        </div>
+                        <span id="act-breakdown-misc">₹0</span>
+                    </div>
+                    <div class="calc-row" style="margin-bottom: 10px;">
+                        <div style="display:flex; flex-direction:column;">
+                            <span>Company Cut</span>
+                            <span id="act-breakdown-cut-note" style="font-size:0.7rem; color:var(--text-muted);">Amount added (20%)</span>
+                        </div>
+                        <span id="act-breakdown-cut">₹0</span>
+                    </div>
+                    <div class="calc-row total" style="border-top: 1px dashed var(--border); padding-top: 12px; margin-top: 10px; margin-bottom: 16px;">
+                        <span>Grand Total (Est)</span>
+                        <span id="act-breakdown-grand">₹0</span>
+                    </div>
+                    <div class="calc-row" style="margin-bottom: 16px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
+                        <div style="display:flex; flex-direction:column;">
+                            <span style="color: var(--success); font-weight: 600;">Total Invoice (Revenue)</span>
+                            <span id="act-breakdown-gst-note" style="font-size:0.7rem; color:var(--success); opacity: 0.8;">Includes adjustments</span>
+                        </div>
+                        <span id="act-breakdown-revenue" style="color: var(--success); font-weight:700;">₹0</span>
+                    </div>
+
+                    <!-- Actuals & Real Operational Variance -->
+                    <div style="border-top: 1px solid var(--border); padding-top: 16px; margin-top: 8px;">
+                        <div class="calc-row total" style="margin-top: 0; border-top: none; padding-top: 0;">
+                            <div style="display:flex; flex-direction:column;">
+                                <span style="font-size: 0.95rem; text-transform: uppercase;">Budget Variance</span>
+                                <span id="act-formula-budget" style="font-size: 0.7rem; color: var(--text-muted); font-weight: normal; text-transform: none;">(Grand Total - Actual Spent)</span>
+                            </div>
+                            <span id="val-realized-profit" style="font-size: 1.25rem;">₹0</span>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="btn-group">
-                    <button class="btn-save btn-action" onclick="saveProjectData('ACT')">Sync Actuals</button>
+                    <button class="btn-action" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-main);" onclick="saveProjectData('ACT_DRAFT')">💾 Save Draft (Values only)</button>
+                    <button class="btn-save btn-action" onclick="saveProjectData('ACT')">✅ Sync Actuals (Finalize remaining to Est)</button>
                     <button class="btn-action" style="background: transparent; border: 1px dashed var(--danger); color: var(--danger); font-size: 0.85rem; padding: 12px;" onclick="clearAllActuals()">Reset & Clear All Actuals</button>
                 </div>
             </div>
@@ -571,7 +647,6 @@
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0cHNudWZ5Y29taG96c2llZ2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5OTI5NjAsImV4cCI6MjA3NzU2ODk2MH0.SsKcUAjkv4gsTKawOfN-KKzYRkUKoQZj-JZDo8liggc";
         var supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // ADDED ACTORS HERE
         const baseCategories = ["Director", "Cinematographer", "Actors", "Equipments Rent", "Food & Travel", "Other Crew", "Editors", "Props & Costume"];
         const monthsList = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
@@ -606,32 +681,65 @@
         let projectChartInstance = null;
         let expensePieChartInstance = null;
         let profitChartInstance = null;
-        let autosaveTimer = null; // New autosave timer
+        let autosaveTimer = null;
 
         function triggerAutosave() {
             clearTimeout(autosaveTimer);
             autosaveTimer = setTimeout(async () => {
                 if (state.isDirty && state.selectedProject) {
                     const currentTabEl = document.querySelector('.toggle-option.active');
-                    const currentTab = currentTabEl ? currentTabEl.id.replace('tab-btn-', '').toUpperCase() : 'EST';
+                    let currentTab = currentTabEl ? currentTabEl.id.replace('tab-btn-', '').toUpperCase() : 'EST';
+                    // Prevent finalization on auto-save
+                    if (currentTab === 'ACT') currentTab = 'ACT_DRAFT';
                     await saveProjectData(currentTab, "Autosaved successfully! 💾");
                 }
             }, 5000);
         }
 
         // Custom helpers for dynamic Advance/Balance tracking
+        function getProjectTotal(p) {
+            if (Number(p?.total_value) > 0) return Number(p.total_value);
+            
+            // Fallback to calculated estimate if total_value hasn't been formally saved yet
+            let sub = 0, misc = 0, cut = 0;
+            if (p?.expenses) {
+                p.expenses.forEach(e => {
+                    const estAmt = Number(e.amount) || 0;
+                    if (e.category_name === 'Miscellaneous') misc = estAmt;
+                    else if (e.category_name === 'Company Cut') cut = estAmt;
+                    else sub += estAmt;
+                });
+            }
+            return sub + misc + cut;
+        }
+
         function getProjectAdvance(p) {
-            const total = Number(p?.total_value) || 0;
+            const total = getProjectTotal(p);
             const advPay = p?.payments?.find(pay => pay.type === 'Advance');
             if (advPay && advPay.expected_amount > 0) return advPay.expected_amount;
             return total * 0.60;
         }
 
         function getProjectBalance(p) {
-            const total = Number(p?.total_value) || 0;
+            const total = getProjectTotal(p);
             const balPay = p?.payments?.find(pay => pay.type === 'Balance');
             if (balPay && balPay.expected_amount > 0) return balPay.expected_amount;
             return total * 0.40;
+        }
+
+        function calculateProjectReceived(p) {
+            let received = 0;
+            if (p.payments) {
+                p.payments.forEach(pay => {
+                    if (pay.status === 'Received') {
+                        let amt = Number(pay.expected_amount) || 0;
+                        if (amt === 0 && pay.type === 'Advance') amt = getProjectAdvance(p);
+                        if (amt === 0 && pay.type === 'Balance') amt = getProjectBalance(p);
+                        received += amt;
+                    }
+                });
+            }
+            return received;
         }
 
         Chart.defaults.color = '#94a3b8';
@@ -699,10 +807,12 @@
             const text = document.getElementById('conn-text');
 
             try {
-                if (state.isDirty && state.selectedProject) {
+                // ALWAYS save the current project state before refreshing, specifically ensuring Draft mode for Actuals
+                if (state.selectedProject) {
                     const currentTabEl = document.querySelector('.toggle-option.active');
-                    const currentTab = currentTabEl ? currentTabEl.id.replace('tab-btn-', '').toUpperCase() : 'EST';
-                    await saveProjectData(currentTab);
+                    let currentTab = currentTabEl ? currentTabEl.id.replace('tab-btn-', '').toUpperCase() : 'EST';
+                    if (currentTab === 'ACT') currentTab = 'ACT_DRAFT';
+                    await saveProjectData(currentTab, "Saving Draft & Syncing... 💾");
                 }
 
                 const { data: clients, error: errC } = await supabaseClient.from('clients').select('*');
@@ -803,7 +913,8 @@
             let totalReceived = 0;
             let currentPending = 0;
             let previousPending = 0;
-            let totalSpent = 0; // Added for profit calculation
+            let totalSpent = 0; 
+            let totalNetProfit = 0; 
             
             const dashMonth = document.getElementById('global-month-filter').value;
             const dashMonthIdx = monthsList.indexOf(dashMonth);
@@ -820,41 +931,49 @@
                 const status = p.status || 'Confirmed';
                 const isConfirmed = (status === 'Confirmed' || status === 'Completed');
 
-                const projVal = Number(p.total_value) || 0;
+                const projVal = getProjectTotal(p);
                 let projSpent = 0;
-                let projReceived = 0;
-
-                if (p.payments) {
-                    p.payments.forEach(pay => {
-                        if (pay.status === 'Received') {
-                            projReceived += pay.type === 'Advance' ? getProjectAdvance(p) : getProjectBalance(p);
-                        }
-                    });
-                }
+                let projReceived = calculateProjectReceived(p);
                 
                 const projPending = projVal - projReceived;
 
+                let projBaseGrand = 0;
+                let sub = 0, misc = 0, cut = 0;
+
                 if (p.expenses) {
                     p.expenses.forEach(e => {
-                        // Skip the company cut from "Spend" calculation as per request
+                        const estAmt = Number(e.amount) || 0;
+                        if (e.category_name === 'Miscellaneous') misc = estAmt;
+                        else if (e.category_name === 'Company Cut') cut = estAmt;
+                        else sub += estAmt;
+
                         if (e.category_name === 'Company Cut') return;
                         projSpent += (Number(e.actual_amount) || 0);
                     });
+                    projBaseGrand = sub + misc + cut;
                 }
+                if (projBaseGrand === 0) projBaseGrand = projVal;
 
                 if (isConfirmed) {
                     if(p.month_name && monthlyData.rev[p.month_name] !== undefined) {
                         monthlyData.rev[p.month_name] += projReceived; 
                         monthlyData.cogs[p.month_name] += projSpent;
                         monthlyData.booked[p.month_name] += projVal;
-                        monthlyData.profit[p.month_name] += (projVal - projSpent);
+                        
+                        if (status === 'Completed') {
+                            monthlyData.profit[p.month_name] += (projBaseGrand - projSpent);
+                        }
                     }
 
                     if (dashMonth === 'All' || p.month_name === dashMonth) {
                         totalBookedRev += projVal;
                         totalReceived += projReceived;
                         currentPending += projPending;
-                        totalSpent += projSpent; // Aggregating total spend
+                        totalSpent += projSpent; 
+
+                        if (status === 'Completed') {
+                            totalNetProfit += (projBaseGrand - projSpent);
+                        }
 
                         if (p.expenses) {
                             p.expenses.forEach(e => {
@@ -881,7 +1000,6 @@
             });
 
             const totalPendingDisplay = currentPending + previousPending;
-            const netProfit = totalBookedRev - totalSpent; // Profit Calculation
 
             state.pieDataEst = categorySpendEst;
             state.pieDataAct = categorySpendAct;
@@ -890,7 +1008,7 @@
             document.getElementById('dash-rev-received').innerText = formatINR(totalReceived);
             document.getElementById('dash-rev-pending').innerText = formatINR(totalPendingDisplay > 0 ? totalPendingDisplay : 0);
             
-            document.getElementById('dash-net-profit').innerText = formatINR(netProfit);
+            document.getElementById('dash-net-profit').innerText = formatINR(totalNetProfit);
             document.getElementById('dash-total-spent').innerText = formatINR(totalSpent);
 
             const prevTextEl = document.getElementById('dash-rev-previous');
@@ -1161,49 +1279,68 @@
                 let clientRev = 0;
                 let clientReceived = 0;
                 let clientSpent = 0;
+                let clientProfit = 0;
+                let completedCount = 0;
                 
                 clientProjects.forEach(cp => {
                     if(cp.status === 'Confirmed' || cp.status === 'Completed') {
-                        const pVal = Number(cp.total_value) || 0;
+                        const pVal = getProjectTotal(cp);
                         clientRev += pVal;
                         
-                        if (cp.payments) {
-                            cp.payments.forEach(pay => {
-                                if (pay.status === 'Received') {
-                                    clientReceived += pay.type === 'Advance' ? getProjectAdvance(cp) : getProjectBalance(cp);
-                                }
-                            });
-                        }
+                        let projBaseGrand = 0;
+                        let sub = 0, misc = 0, cut = 0;
+                        let projSpent = 0;
+
+                        clientReceived += calculateProjectReceived(cp);
 
                         if (cp.expenses) {
                             cp.expenses.forEach(e => {
+                                const estAmt = Number(e.amount) || 0;
+                                if (e.category_name === 'Miscellaneous') misc = estAmt;
+                                else if (e.category_name === 'Company Cut') cut = estAmt;
+                                else sub += estAmt;
+
                                 if (e.category_name === 'Company Cut') return;
-                                clientSpent += (Number(e.actual_amount) || 0);
+                                projSpent += (Number(e.actual_amount) || 0);
                             });
+                            projBaseGrand = sub + misc + cut;
+                        }
+                        if (projBaseGrand === 0) projBaseGrand = pVal;
+                        
+                        clientSpent += projSpent;
+
+                        if (cp.status === 'Completed') {
+                            clientProfit += (projBaseGrand - projSpent);
+                            completedCount++;
                         }
                     }
                 });
 
                 const clientPending = clientRev - clientReceived;
-                const clientProfit = clientRev - clientSpent;
 
-                const profitColor = clientProfit >= 0 ? '#86efac' : '#fca5a5';
-                const profitSign = clientProfit >= 0 ? '+' : '-';
-                const formattedClientProfit = formatINR(Math.abs(clientProfit));
+                let profitHtml = `<span style="color: var(--text-muted); font-weight: 600;">Profit: --</span>`;
+                if (completedCount > 0) {
+                    const profitColor = clientProfit >= 0 ? '#86efac' : '#fca5a5';
+                    const profitSign = clientProfit >= 0 ? '+' : '-';
+                    const profitLabel = clientProfit >= 0 ? 'Profit' : 'Loss';
+                    profitHtml = `<span style="color: ${profitColor}; font-weight: 800;">${profitLabel}: ${profitSign}${formatINR(Math.abs(clientProfit))}</span>`;
+                }
 
                 const div = document.createElement('div');
                 div.className = 'card';
                 div.innerHTML = `
                     <div class="client-clickable" style="flex: 1;">
-                        <div style="font-weight:600; font-size:1.05rem;">${c.name}</div>
-                        <div style="font-size:0.8rem; color:var(--text-muted); margin-top:4px;">
-                            ${count} Projects • <span style="font-weight:600; color:var(--text-main);">${formatINR(clientRev)}</span>
+                        <div style="font-weight:700; font-size:1.1rem; color:var(--text-main);">${c.name}</div>
+                        <div style="font-size:0.85rem; color:var(--text-muted); margin-top:4px; display:flex; align-items:center; gap: 6px;">
+                            <span>${count} Projects</span>
+                            <span style="color:var(--border);">|</span>
+                            <span>Total Value: <span style="font-weight:800; color:var(--text-main); font-size: 0.95rem;">${formatINR(clientRev)}</span></span>
                         </div>
-                        <div style="font-size:0.75rem; margin-top:6px; display: flex; gap: 10px; flex-wrap: wrap;">
+                        <div style="font-size:0.75rem; margin-top:10px; display: flex; gap: 12px; flex-wrap: wrap;">
+                            <span style="color: var(--danger); font-weight: 600;">Spend: ${formatINR(clientSpent)}</span>
+                            ${profitHtml}
                             <span style="color: var(--success); font-weight: 600;">Rec: ${formatINR(clientReceived)}</span>
                             <span style="color: var(--warning); font-weight: 600;">Bal: ${formatINR(clientPending)}</span>
-                            <span style="color: var(--danger); font-weight: 600;">Spend: ${formatINR(clientSpent)}</span>
-                            <span style="color: ${profitColor}; font-weight: 700;">Profit: ${profitSign}${formattedClientProfit}</span>
                         </div>
                     </div>
                     <div style="display:flex; align-items:center; gap:8px;">
@@ -1243,33 +1380,40 @@
             const projects = filteredProjectsList.filter(p => p.client_id === state.selectedClient.id);
 
             projects.forEach(p => {
-                const totalVal = Number(p.total_value) || 0;
+                const totalVal = getProjectTotal(p);
                 const status = p.status || 'Confirmed';
                 
-                let projReceived = 0;
-                if (p.payments) {
-                    p.payments.forEach(pay => {
-                        if (pay.status === 'Received') {
-                            projReceived += pay.type === 'Advance' ? getProjectAdvance(p) : getProjectBalance(p);
-                        }
-                    });
-                }
+                let projReceived = calculateProjectReceived(p);
                 const projPending = totalVal - projReceived;
 
                 let projSpent = 0;
+                let projBaseGrand = 0;
+                let sub = 0, misc = 0, cut = 0;
+
                 if (p.expenses) {
                     p.expenses.forEach(e => {
+                        const estAmt = Number(e.amount) || 0;
+                        if (e.category_name === 'Miscellaneous') misc = estAmt;
+                        else if (e.category_name === 'Company Cut') cut = estAmt;
+                        else sub += estAmt;
+
                         if (e.category_name !== 'Company Cut') {
                             projSpent += (Number(e.actual_amount) || 0);
                         }
                     });
+                    projBaseGrand = sub + misc + cut;
                 }
+                if (projBaseGrand === 0) projBaseGrand = totalVal;
 
-                const projProfit = totalVal - projSpent;
-                const profitColor = projProfit >= 0 ? '#86efac' : '#fca5a5';
-                const profitSign = projProfit >= 0 ? '+' : '-';
-                const formattedProfit = formatINR(Math.abs(projProfit));
-                const profitDisplayHtml = `<div style="font-size: 0.75rem; color: ${profitColor}; font-weight: 700; margin-top: 4px;">Profit: ${profitSign}${formattedProfit}</div>`;
+                let profitDisplayHtml = '';
+                if (status === 'Completed') {
+                    const projProfit = projBaseGrand - projSpent;
+                    const profitColor = projProfit >= 0 ? '#86efac' : '#fca5a5';
+                    const profitSign = projProfit >= 0 ? '+' : '-';
+                    const profitLabel = projProfit >= 0 ? 'Profit' : 'Loss';
+                    const formattedProfit = formatINR(Math.abs(projProfit));
+                    profitDisplayHtml = `<div style="font-size: 0.75rem; color: ${profitColor}; font-weight: 700; margin-top: 4px;">${profitLabel}: ${profitSign}${formattedProfit}</div>`;
+                }
 
                 let revStatusHtml = '';
                 if (status === 'Confirmed' || status === 'Completed') {
@@ -1281,6 +1425,11 @@
                 } else if (status === 'Estimate') {
                     revStatusHtml = `<div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 600; margin-top: 6px;">📝 ESTIMATE ONLY</div>`;
                 }
+
+                let valueLabel = 'VALUE';
+                if (status === 'Estimate') valueLabel = 'ESTIMATED AMOUNT';
+                else if (status === 'Confirmed') valueLabel = 'CONFIRMED AMOUNT';
+                else if (status === 'Completed') valueLabel = 'COMPLETED AMOUNT';
 
                 const div = document.createElement('div');
                 div.className = 'card';
@@ -1295,7 +1444,7 @@
                         </select>
                     </div>
                     <div style="text-align:right;">
-                        <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600;">VALUE</div>
+                        <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">${valueLabel}</div>
                         <div style="font-weight:800; color:var(--text-main); font-size: 1.1rem;">${formatINR(totalVal)}</div>
                         ${profitDisplayHtml}
                         ${revStatusHtml}
@@ -1381,6 +1530,7 @@
             renderEstimateExpenses();
 
             document.getElementById('inp-total-val').value = p.total_value || document.getElementById('val-est-grand').innerText.replace(/[₹,]/g, '') || 0;
+            document.getElementById('inp-pay-date').value = new Date().toISOString().split('T')[0];
             calculateSplits();
             updatePaymentUI();
 
@@ -1522,6 +1672,7 @@
             if (document.activeElement !== inpCut) inpCut.value = state.manualCut ? Math.round(cut) : (Math.round(cut) || "");
             
             document.getElementById('val-est-grand').innerText = formatINR(grand);
+            document.getElementById('rev-display-est-grand').innerText = formatINR(grand);
 
             if(!state.selectedProject.total_value) {
                 document.getElementById('inp-total-val').value = Math.round(grand);
@@ -1529,6 +1680,58 @@
             }
 
             updateTextPreview(grand);
+        }
+
+        function getBaseGrandTotal() {
+            let subtotal = 0;
+            for (let k in state.expensesMap) {
+                if (k !== 'Miscellaneous' && k !== 'Company Cut') {
+                    subtotal += (state.expensesMap[k].estimate || 0);
+                }
+            }
+            let misc = state.expensesMap['Miscellaneous']?.estimate || 0;
+            let cut = state.expensesMap['Company Cut']?.estimate || 0;
+            return subtotal + misc + cut;
+        }
+
+        function toggleGST() {
+            const grandTotal = getBaseGrandTotal();
+            const currentTotal = Number(document.getElementById('inp-total-val').value) || 0;
+            
+            const isGSTApplied = Math.abs(currentTotal - (grandTotal * 1.18)) < 5;
+            
+            if (isGSTApplied) {
+                document.getElementById('inp-total-val').value = Math.round(grandTotal);
+                showToast("GST Excluded");
+            } else {
+                const gstAmount = grandTotal * 0.18;
+                document.getElementById('inp-total-val').value = Math.round(grandTotal + gstAmount);
+                showToast("18% GST Applied");
+            }
+            
+            calculateSplits();
+            saveProjectData('REV');
+        }
+
+        function updateGSTButtonUI() {
+            const btn = document.getElementById('btn-gst-toggle');
+            if (!btn) return;
+            
+            const grandTotal = getBaseGrandTotal();
+            const currentTotal = Number(document.getElementById('inp-total-val').value) || 0;
+            const isGSTApplied = grandTotal > 0 && Math.abs(currentTotal - (grandTotal * 1.18)) < 5;
+            
+            if (isGSTApplied) {
+                btn.innerHTML = '- Exclude 18% GST';
+                btn.style.background = 'rgba(239, 68, 68, 0.15)';
+                btn.style.borderColor = 'var(--danger)';
+                btn.style.color = 'var(--danger)';
+            } else {
+                btn.innerHTML = '+ Include 18% GST';
+                btn.style.background = 'rgba(16, 185, 129, 0.15)';
+                btn.style.borderColor = 'var(--success)';
+                btn.style.color = 'var(--success)';
+            }
         }
 
         function markDirty() { 
@@ -1564,9 +1767,9 @@
             document.getElementById('inp-balance-val').value = newBal;
             
             updateSplitLabels(total, newAdv, newBal);
-            
-            renderActualsExpenses(); 
+
             updatePaymentUI(); 
+            updateGSTButtonUI();
             markDirty();
         }
 
@@ -1595,51 +1798,148 @@
         function updateSplitLabels(total, adv, bal) {
             const advPct = total > 0 ? Math.round((adv / total) * 100) : 60;
             const balPct = total > 0 ? Math.round((bal / total) * 100) : 40;
-            document.getElementById('lbl-adv-pct').innerText = `Advance (${advPct}%)`;
-            document.getElementById('lbl-bal-pct').innerText = `Balance (${balPct}%)`;
+            const elAdv = document.getElementById('lbl-adv-pct');
+            const elBal = document.getElementById('lbl-bal-pct');
+            if(elAdv) elAdv.innerText = `Advance (${advPct}%)`;
+            if(elBal) elBal.innerText = `Balance (${balPct}%)`;
         }
 
         function updatePaymentUI() {
-            ['btn-adv-pend', 'btn-adv-rec', 'btn-bal-pend', 'btn-bal-rec'].forEach(id => document.getElementById(id).classList.remove('active'));
-            
-            let totalReceived = 0;
             const totalInvoice = Number(document.getElementById('inp-total-val').value) || 0;
-            const advAmt = Number(document.getElementById('inp-advance-val').value) || 0;
-            const balAmt = Number(document.getElementById('inp-balance-val').value) || 0;
-
-            state.currentPayments.forEach(pay => {
-                if (pay.type === 'Advance') {
-                    if (pay.status === 'Received') {
-                        document.getElementById('btn-adv-rec').classList.add('active');
-                        totalReceived += advAmt;
-                    }
-                    else document.getElementById('btn-adv-pend').classList.add('active');
-                }
-                if (pay.type === 'Balance') {
-                    if (pay.status === 'Received') {
-                        document.getElementById('btn-bal-rec').classList.add('active');
-                        totalReceived += balAmt;
-                    }
-                    else document.getElementById('btn-bal-pend').classList.add('active');
-                }
-            });
-
+            const totalReceived = calculateProjectReceived(state.selectedProject);
             const pendingAmount = totalInvoice - totalReceived;
+
             document.getElementById('val-total-received').innerText = formatINR(totalReceived);
             document.getElementById('val-total-pending').innerText = formatINR(pendingAmount > 0 ? pendingAmount : 0);
+
+            // Restore tick/cross active states
+            const btnAdvPend = document.getElementById('btn-adv-pend');
+            const btnAdvRec = document.getElementById('btn-adv-rec');
+            const btnBalPend = document.getElementById('btn-bal-pend');
+            const btnBalRec = document.getElementById('btn-bal-rec');
+
+            if (btnAdvPend) {
+                ['btn-adv-pend', 'btn-adv-rec', 'btn-bal-pend', 'btn-bal-rec'].forEach(id => document.getElementById(id).classList.remove('active'));
+                
+                let advStatus = 'Pending';
+                let balStatus = 'Pending';
+                state.currentPayments.forEach(pay => {
+                    if (pay.type === 'Advance' && pay.status === 'Received') advStatus = 'Received';
+                    if (pay.type === 'Balance' && pay.status === 'Received') balStatus = 'Received';
+                });
+
+                if (advStatus === 'Received') btnAdvRec.classList.add('active');
+                else btnAdvPend.classList.add('active');
+
+                if (balStatus === 'Received') btnBalRec.classList.add('active');
+                else btnBalPend.classList.add('active');
+            }
+
+            const historyList = document.getElementById('revenue-history-list');
+            if (!historyList) return;
+            historyList.innerHTML = '';
+
+            const receivedPayments = (state.currentPayments || []).filter(p => p.status === 'Received');
+            
+            if (receivedPayments.length === 0) {
+                historyList.innerHTML = `<div style="padding: 16px; text-align: center; color: var(--text-muted); font-size: 0.85rem;">No payments recorded yet.</div>`;
+            } else {
+                receivedPayments.sort((a,b) => new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0));
+
+                receivedPayments.forEach(pay => {
+                    let amt = Number(pay.expected_amount) || 0;
+                    if (amt === 0 && pay.type === 'Advance') amt = totalInvoice * 0.6;
+                    if (amt === 0 && pay.type === 'Balance') amt = totalInvoice * 0.4;
+                    
+                    const dateSrc = pay.updated_at || pay.created_at || new Date().toISOString();
+                    const dateStr = new Date(dateSrc).toLocaleDateString('en-GB', {day: 'numeric', month: 'short', year: 'numeric'});
+
+                    historyList.innerHTML += `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border);">
+                            <div>
+                                <div style="font-weight: 600; color: var(--text-main); font-size: 0.95rem;">${pay.type || 'Payment'}</div>
+                                <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 4px;">${dateStr}</div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div style="text-align: right;">
+                                    <div style="font-weight: 700; color: var(--success); font-size: 1rem;">${formatINR(amt)}</div>
+                                </div>
+                                <button class="btn-del" onclick="deletePaymentRecord('${pay.id}')" style="font-size: 1.1rem; color: var(--danger); opacity: 0.8;">×</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        async function addPaymentRecord() {
+            const dateVal = document.getElementById('inp-pay-date').value;
+            const amountVal = Number(document.getElementById('inp-pay-amount').value);
+
+            if (!amountVal || amountVal <= 0) return showToast("Enter a valid amount");
+            
+            const timestamp = dateVal ? new Date(dateVal).toISOString() : new Date().toISOString();
+            const payType = `Payment ${state.currentPayments.filter(p => p.status === 'Received').length + 1}`;
+
+            const newPay = { 
+                project_id: state.selectedProject.id, 
+                type: payType, 
+                status: 'Received', 
+                expected_amount: amountVal,
+                updated_at: timestamp
+            };
+
+            const { data, error } = await supabaseClient.from('payments').insert(newPay).select();
+            
+            if (error) {
+                console.error(error);
+                return showToast("Failed to save payment");
+            }
+
+            if (data && data.length) {
+                state.currentPayments.push(data[0]);
+                state.selectedProject.payments = state.currentPayments;
+            }
+
+            document.getElementById('inp-pay-amount').value = '';
+            
+            updatePaymentUI();
+            updateGlobalDashboard();
+            showToast("Payment Added ✅");
+        }
+
+        async function deletePaymentRecord(payId) {
+            if (!(await customConfirm("Delete this payment record?"))) return;
+
+            await supabaseClient.from('payments').delete().eq('id', payId);
+            
+            state.currentPayments = state.currentPayments.filter(p => String(p.id) !== String(payId));
+            state.selectedProject.payments = state.currentPayments;
+
+            updatePaymentUI();
+            updateGlobalDashboard();
+            showToast("Payment Deleted 🗑️");
         }
 
         async function setPaymentStatus(type, status) {
             const amt = type === 'Advance' ? Number(document.getElementById('inp-advance-val').value) : Number(document.getElementById('inp-balance-val').value);
             let existing = state.currentPayments.find(p => p.type === type);
+            
+            const timestamp = new Date().toISOString();
+            
             if (existing) {
                 existing.status = status;
-                await supabaseClient.from('payments').update({ status, expected_amount: amt }).eq('id', existing.id);
+                existing.expected_amount = amt;
+                existing.updated_at = timestamp;
+                await supabaseClient.from('payments').update({ status, expected_amount: amt, updated_at: timestamp }).eq('id', existing.id);
             } else {
-                const newPay = { project_id: state.selectedProject.id, type, status, expected_amount: amt || 0 };
+                const newPay = { project_id: state.selectedProject.id, type, status, expected_amount: amt || 0, updated_at: timestamp };
                 const { data } = await supabaseClient.from('payments').insert(newPay).select();
-                if(data && data.length) state.currentPayments.push(data[0]);
+                if(data && data.length) {
+                    state.currentPayments.push(data[0]);
+                }
             }
+            state.selectedProject.payments = state.currentPayments;
             updatePaymentUI();
             showToast("Payment Status Updated");
             updateGlobalDashboard();
@@ -1667,30 +1967,74 @@
         }
 
         function updateActualsTotals() {
-            let totalEst = 0; let totalAct = 0;
+            let totalEstSub = 0;
+            let totalAct = 0;
+
+            let miscEst = state.expensesMap['Miscellaneous']?.estimate || 0;
+            let cutEst = state.expensesMap['Company Cut']?.estimate || 0;
+
             Object.keys(state.expensesMap).forEach(cat => {
-                if (cat === 'Company Cut') return; // Skip company cut from actuals totally
+                if (cat === 'Company Cut' || cat === 'Miscellaneous') return;
 
                 const est = state.expensesMap[cat].estimate || 0;
+                totalEstSub += est;
+            });
+
+            // Calculate actual total operational spend
+            Object.keys(state.expensesMap).forEach(cat => {
+                if (cat === 'Company Cut') return; // Completely hide Company Cut from actuals total
+
                 let act = state.expensesMap[cat].actual;
                 const subItems = state.expensesMap[cat].subItems || [];
                 const isSplit = subItems.length > 0;
                 
-                // Do not fallback to estimate. Actual is what we explicitly type, otherwise 0
                 if (act === null || act === undefined || act === '') {
                     act = isSplit ? subItems.reduce((s, i) => s + (Number(i.amount)||0), 0) : 0; 
                 }
-                totalEst += est; 
                 totalAct += act;
             });
 
-            document.getElementById('val-act-est-total').innerText = formatINR(totalEst);
+            const grandTotalEst = totalEstSub + miscEst + cutEst;
+
+            // Detail Panel update
+            document.getElementById('act-breakdown-sub').innerText = formatINR(totalEstSub);
+            document.getElementById('act-breakdown-misc').innerText = formatINR(miscEst);
+            document.getElementById('act-breakdown-cut').innerText = formatINR(cutEst);
+            document.getElementById('act-breakdown-grand').innerText = formatINR(grandTotalEst);
+
+            const totalInvoice = Number(document.getElementById('inp-total-val').value) || grandTotalEst;
+            document.getElementById('act-breakdown-revenue').innerText = formatINR(totalInvoice);
+
+            const diff = totalInvoice - grandTotalEst;
+            const gstNote = document.getElementById('act-breakdown-gst-note');
+            if (diff > 0) {
+                // If it looks like 18% GST addition
+                if (Math.abs(diff - (grandTotalEst * 0.18)) < 10) {
+                    gstNote.innerText = "+ ₹" + Math.round(diff).toLocaleString('en-IN') + " (18% GST included)";
+                } else {
+                    gstNote.innerText = "+ ₹" + Math.round(diff).toLocaleString('en-IN') + " (Extra adjusted)";
+                }
+                gstNote.style.color = "var(--success)";
+            } else if (diff < 0) {
+                 gstNote.innerText = "- ₹" + Math.round(Math.abs(diff)).toLocaleString('en-IN') + " (Discount applied)";
+                 gstNote.style.color = "var(--warning)";
+            } else {
+                gstNote.innerText = "Matches Estimate perfectly";
+                gstNote.style.color = "var(--text-muted)";
+            }
+
+            // Summary Panel update (Budget Variance = Grand Total - Actual Spend)
             document.getElementById('val-act-spent-total').innerText = formatINR(totalAct);
 
-            const variance = totalEst - totalAct;
+            const variance = grandTotalEst - totalAct;
             const profitEl = document.getElementById('val-realized-profit');
             profitEl.innerText = formatINR(variance);
             profitEl.style.color = variance >= 0 ? 'var(--success)' : 'var(--danger)';
+            
+            const budgetFormulaEl = document.getElementById('act-formula-budget');
+            if (budgetFormulaEl) {
+                budgetFormulaEl.innerText = `(Grand: ${formatINR(grandTotalEst)} - Act: ${formatINR(totalAct)})`;
+            }
         }
 
         function addSubItem(cat) {
@@ -1728,7 +2072,7 @@
                 
                 const safeCat = cat.replace(/[^a-zA-Z0-9]/g, '_');
                 const baseInput = document.getElementById(`act-input-${safeCat}`);
-                if (baseInput) baseInput.value = total;
+                if (baseInput) baseInput.value = total === 0 ? '' : total;
             }
             updateActualsTotals();
             markDirty();
@@ -1752,13 +2096,17 @@
                 const subItems = state.expensesMap[cat].subItems || [];
                 const isSplit = subItems.length > 0;
                 
-                // Allow empty inputs natively
+                // Allow empty inputs natively & Convert 0 to blank
                 let displayAct = act;
                 if (displayAct === null || displayAct === undefined) {
                     displayAct = isSplit ? subItems.reduce((s, i) => s + (Number(i.amount)||0), 0) : ''; 
+                } 
+                
+                if (displayAct === 0 && !isSplit) {
+                    displayAct = ''; 
                 }
 
-                if (est > 0 || displayAct !== '' || isSplit || state.customRows.includes(cat)) {
+                if (est > 0 || act !== null || isSplit || state.customRows.includes(cat)) {
                     
                     const mainWrap = document.createElement('div');
                     
@@ -1781,8 +2129,8 @@
                     const safeCat = cat.replace(/[^a-zA-Z0-9]/g, '_');
                     
                     let actualInputHtml = isSplit ? 
-                        `<input type="number" id="act-input-${safeCat}" class="expense-input" value="${displayAct}" readonly style="color: var(--warning); opacity: 0.6;" title="Calculated from splits">` : 
-                        `<input type="number" id="act-input-${safeCat}" class="expense-input" value="${displayAct}" oninput="updateActualMap('${cat}', this.value)" style="color: var(--warning);">`;
+                        `<input type="number" id="act-input-${safeCat}" class="expense-input" value="${displayAct}" readonly style="color: var(--warning); opacity: 0.6;" title="Calculated from splits" placeholder="0">` : 
+                        `<input type="number" id="act-input-${safeCat}" class="expense-input" value="${displayAct}" oninput="updateActualMap('${cat}', this.value)" style="color: var(--warning);" placeholder="0">`;
 
                     row.innerHTML = `
                         ${labelHtml}
@@ -1800,12 +2148,13 @@
                         
                         let subHtml = '';
                         subItems.forEach((sub, idx) => {
+                            const displaySubAmt = sub.amount === 0 ? '' : sub.amount;
                             subHtml += `
                                 <div class="sub-expense-row">
                                     <input type="text" value="${sub.name}" oninput="updateSubItemName('${cat}', ${idx}, this.value)" placeholder="Sub-item name" style="background: transparent; border: none; color: var(--text-muted); font-size: 0.85rem; padding: 4px;">
                                     <div class="expense-input-wrapper" style="background: rgba(0,0,0,0.3); padding: 2px 6px;">
                                         <span style="color: var(--warning); font-size: 0.75rem;">₹</span>
-                                        <input type="number" value="${sub.amount}" oninput="updateSubItemAmount('${cat}', ${idx}, this.value)" style="color: var(--warning); padding: 2px; font-size: 0.85rem;">
+                                        <input type="number" value="${displaySubAmt}" oninput="updateSubItemAmount('${cat}', ${idx}, this.value)" style="color: var(--warning); padding: 2px; font-size: 0.85rem;" placeholder="0">
                                     </div>
                                     <button class="btn-del" onclick="deleteSubItem('${cat}', ${idx})" style="font-size: 1rem;">×</button>
                                 </div>
@@ -1858,13 +2207,14 @@
 
             const totalVal = Number(document.getElementById('inp-total-val').value) || 0;
             
-            // Only if the user explicitly clicked "Sync Actuals" do we formalize the default visual estimates into permanent Actuals
+            // Only if the user explicitly clicked "Sync Actuals" (ACT) do we formalize empty ones into permanent Actuals
             if (tabSource === 'ACT') {
                 for (let cat in state.expensesMap) {
                     if (state.expensesMap[cat].actual === null && (!state.expensesMap[cat].subItems || state.expensesMap[cat].subItems.length === 0)) {
                         state.expensesMap[cat].actual = state.expensesMap[cat].estimate;
                     }
                 }
+                renderActualsExpenses(); // visually update
             }
 
             if (tabSource === 'REV') {
@@ -1965,7 +2315,7 @@
             let pendingHtml = '';
             let receivedHtml = '';
             let totalPending = 0;
-            let totalReceived = 0;
+            let totalReceivedGlobal = 0;
 
             const dashMonth = document.getElementById('global-month-filter').value;
             const dashMonthIdx = monthsList.indexOf(dashMonth);
@@ -1975,39 +2325,30 @@
                 if (p.status !== 'Confirmed' && p.status !== 'Completed') return;
 
                 const clientName = state.dbClients.find(c => String(c.id) === String(p.client_id))?.name || 'Unknown';
-                const totalVal = Number(p.total_value) || 0;
-                
-                const advPay = p.payments ? p.payments.find(pay => pay.type === 'Advance') : null;
-                const balPay = p.payments ? p.payments.find(pay => pay.type === 'Balance') : null;
-                
-                const advAmt = getProjectAdvance(p);
-                const balAmt = getProjectBalance(p);
-                const isAdvReceived = advPay && advPay.status === 'Received';
-                const isBalReceived = balPay && balPay.status === 'Received';
+                const totalVal = getProjectTotal(p);
+                const projReceived = calculateProjectReceived(p);
+                const pendAmt = totalVal - projReceived;
 
                 const pMonthIdx = monthsList.indexOf(p.month_name);
                 const isCurrentMonthOrAll = (dashMonth === 'All' || p.month_name === dashMonth);
-                
-                let pendAmt = 0;
-                if (!isAdvReceived) pendAmt += advAmt;
-                else if (!isBalReceived) pendAmt += balAmt;
-                
                 const isPastPending = (dashMonth !== 'All' && pMonthIdx < dashMonthIdx && pendAmt > 0);
 
-                if (isAdvReceived) {
-                    totalReceived += advAmt;
-                    receivedHtml += createPaymentCard(p, clientName, 'Advance', advAmt, true);
-                } else if ((isCurrentMonthOrAll || isPastPending) && (advAmt > 0 || p.status === 'Confirmed')) {
-                    totalPending += advAmt;
-                    pendingHtml += createPaymentCard(p, clientName, 'Advance', advAmt, false);
+                if ((isCurrentMonthOrAll || isPastPending) && pendAmt > 0) {
+                    totalPending += pendAmt;
+                    pendingHtml += createPendingCard(p, clientName, pendAmt);
                 }
 
-                if (isBalReceived) {
-                    totalReceived += balAmt;
-                    receivedHtml += createPaymentCard(p, clientName, 'Balance', balAmt, true);
-                } else if ((isCurrentMonthOrAll || isPastPending) && balAmt > 0 && isAdvReceived) {
-                    totalPending += balAmt;
-                    pendingHtml += createPaymentCard(p, clientName, 'Balance', balAmt, false);
+                if (p.payments && isCurrentMonthOrAll) {
+                    p.payments.forEach(pay => {
+                        if (pay.status === 'Received') {
+                            let amt = Number(pay.expected_amount) || 0;
+                            if (amt === 0 && pay.type === 'Advance') amt = totalVal * 0.6;
+                            if (amt === 0 && pay.type === 'Balance') amt = totalVal * 0.4;
+                            
+                            totalReceivedGlobal += amt;
+                            receivedHtml += createReceivedCard(p, clientName, pay, amt);
+                        }
+                    });
                 }
             });
 
@@ -2024,68 +2365,69 @@
                 <div>
                     <h2 style="color: var(--success); display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border); padding-bottom: 8px;">
                         <span>✅ RECEIVED PAYMENTS</span>
-                        <span>${formatINR(totalReceived)}</span>
+                        <span>${formatINR(totalReceivedGlobal)}</span>
                     </h2>
                     <div style="display:flex; flex-direction:column; gap:10px; margin-top:12px;">
-                        ${receivedHtml || '<div style="color: var(--text-muted); font-size: 0.85rem; padding: 10px; text-align: center; background: rgba(0,0,0,0.2); border-radius: 12px;">No received payments yet for this year.</div>'}
+                        ${receivedHtml || '<div style="color: var(--text-muted); font-size: 0.85rem; padding: 10px; text-align: center; background: rgba(0,0,0,0.2); border-radius: 12px;">No received payments yet for this period.</div>'}
                     </div>
                 </div>
             `;
         }
 
-        function createPaymentCard(project, clientName, type, amount, isReceived) {
-            const color = isReceived ? 'var(--success)' : 'var(--warning)';
-            const totalVal = Number(project.total_value) || 0;
-            const pct = totalVal > 0 ? Math.round((amount / totalVal) * 100) : (type === 'Advance' ? 60 : 40);
+        function createPendingCard(project, clientName, amount) {
+            let actionBtn = `<button onclick="quickAddFullPayment('${project.id}', ${amount})" style="background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid var(--success); padding: 6px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer; margin-top: 10px; transition: 0.2s;">Mark Balance Received ✔</button>`;
             
-            let actionBtn = '';
-            let lockDateNote = '';
-            let cardBorder = 'var(--border)';
-            let cardShadow = 'none';
-
-            if (!isReceived) {
-                actionBtn = `<button onclick="quickMarkPaid('${project.id}', '${type}')" style="background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid var(--success); padding: 6px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer; margin-top: 10px; transition: 0.2s;">Mark Received ✔</button>`;
-                
-                if (type === 'Advance' && project.status === 'Confirmed') {
-                    cardBorder = 'var(--warning)';
-                    cardShadow = '0 4px 15px rgba(245, 158, 11, 0.1)';
-                    lockDateNote = `<div style="margin-top: 10px; font-size: 0.75rem; color: var(--warning); background: rgba(245, 158, 11, 0.1); padding: 6px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; font-weight: 600;"><span style="font-size: 1rem;">🔔</span> Ask for advance to lock date!</div>`;
-                }
-            }
-
             return `
-            <div style="background: var(--bg-card); border: 1px solid ${cardBorder}; box-shadow: ${cardShadow}; border-radius: 16px; padding: 16px; display: flex; justify-content: space-between; align-items: flex-start; transition: 0.2s;">
+            <div style="background: var(--bg-card); border: 1px solid var(--warning); box-shadow: 0 4px 15px rgba(245, 158, 11, 0.1); border-radius: 16px; padding: 16px; display: flex; justify-content: space-between; align-items: flex-start; transition: 0.2s;">
                 <div>
                     <div style="font-weight: 700; font-size: 1.05rem; margin-bottom: 4px;">${project.name}</div>
-                    <div style="font-size: 0.8rem; color: var(--text-muted);">${clientName} • ${type} ( ${pct}% )</div>
-                    ${lockDateNote}
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">${clientName} • Pending Balance</div>
                     <div style="margin-top: 4px;">${actionBtn}</div>
                 </div>
-                <div style="text-align: right; font-weight: 800; font-size: 1.2rem; color: ${color};">
+                <div style="text-align: right; font-weight: 800; font-size: 1.2rem; color: var(--warning);">
                     ${formatINR(amount)}
                 </div>
             </div>`;
         }
 
-        async function quickMarkPaid(projectId, type) {
+        function createReceivedCard(project, clientName, payment, amount) {
+            const dateSrc = payment.updated_at || payment.created_at || new Date().toISOString();
+            const dateStr = new Date(dateSrc).toLocaleDateString('en-GB', {day: 'numeric', month: 'short', year: 'numeric'});
+
+            return `
+            <div style="background: var(--bg-card); border: 1px solid var(--success); box-shadow: none; border-radius: 16px; padding: 16px; display: flex; justify-content: space-between; align-items: flex-start; transition: 0.2s;">
+                <div>
+                    <div style="font-weight: 700; font-size: 1.05rem; margin-bottom: 4px;">${project.name}</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted);">${clientName} • ${payment.type || 'Payment'}</div>
+                    <div style="font-size: 0.7rem; color: var(--success); background: rgba(16,185,129,0.1); padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 6px; font-weight: 600;">Paid on ${dateStr}</div>
+                </div>
+                <div style="text-align: right; font-weight: 800; font-size: 1.2rem; color: var(--success);">
+                    ${formatINR(amount)}
+                </div>
+            </div>`;
+        }
+
+        async function quickAddFullPayment(projectId, amount) {
             const p = state.dbProjects.find(proj => String(proj.id) === String(projectId));
             if (!p) return;
 
-            const amt = type === 'Advance' ? getProjectAdvance(p) : getProjectBalance(p);
+            const payType = `Payment ${p.payments ? p.payments.filter(x => x.status === 'Received').length + 1 : 1}`;
 
-            if(!p.payments) p.payments = [];
-            let existing = p.payments.find(pay => pay.type === type);
+            const newPay = { 
+                project_id: projectId, 
+                type: payType, 
+                status: 'Received', 
+                expected_amount: amount,
+                updated_at: new Date().toISOString()
+            };
             
-            if (existing) {
-                existing.status = 'Received';
-                await supabaseClient.from('payments').update({ status: 'Received', expected_amount: amt }).eq('id', existing.id);
-            } else {
-                const newPay = { project_id: projectId, type: type, status: 'Received', expected_amount: amt };
-                const { data } = await supabaseClient.from('payments').insert(newPay).select();
-                if(data && data.length) p.payments.push(data[0]);
+            const { data } = await supabaseClient.from('payments').insert(newPay).select();
+            if(data && data.length) {
+                if(!p.payments) p.payments = [];
+                p.payments.push(data[0]);
             }
             
-            showToast(type + " marked as Paid! ✅");
+            showToast("Marked as Paid! ✅");
             renderPayments();
             updateGlobalDashboard();
         }
