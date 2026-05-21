@@ -352,7 +352,7 @@
             <div id="tab-content-rev" style="display: none;">
                 
                 <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom: 12px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 12px; border: 1px dashed var(--border);">
-                    <div style="font-size: 0.85rem; color: var(--text-muted);">Grand Total Est: <br><span id="rev-display-est-grand" style="color:var(--text-main); font-weight:800; font-size: 1.1rem;">₹0</span></div>
+                    <div style="font-size: 0.85rem; color: var(--text-muted);">Grand Total Est: <br><span id="rev-display-est-grand" data-raw-value="0" style="color:var(--text-main); font-weight:800; font-size: 1.1rem;">₹0</span></div>
                     <button id="btn-gst-toggle" onclick="toggleGST()" style="background: rgba(16, 185, 129, 0.15); border: 1px solid var(--success); color: var(--success); border-radius: 8px; padding: 8px 12px; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: 0.2s;">+ Include 18% GST</button>
                 </div>
 
@@ -440,14 +440,14 @@
                     <div class="calc-row" style="margin-bottom: 10px;">
                         <div style="display:flex; flex-direction:column;">
                             <span>Miscellaneous</span>
-                            <span id="act-breakdown-misc-note" style="font-size:0.7rem; color:var(--text-muted);">Amount added (10%)</span>
+                            <span id="act-breakdown-misc-note" style="font-size:0.7rem; color:var(--text-muted);">Amount added</span>
                         </div>
                         <span id="act-breakdown-misc">₹0</span>
                     </div>
                     <div class="calc-row" style="margin-bottom: 10px;">
                         <div style="display:flex; flex-direction:column;">
                             <span>Company Cut</span>
-                            <span id="act-breakdown-cut-note" style="font-size:0.7rem; color:var(--text-muted);">Amount added (28%)</span>
+                            <span id="act-breakdown-cut-note" style="font-size:0.7rem; color:var(--text-muted);">Amount added</span>
                         </div>
                         <span id="act-breakdown-cut">₹0</span>
                     </div>
@@ -604,6 +604,17 @@
         </div>
     </div>
 
+    <div id="modal-prompt-date" class="modal-overlay">
+        <div class="modal">
+            <h3 id="modal-prompt-date-msg">Select Date</h3>
+            <input type="date" id="modal-prompt-date-input" style="margin-bottom:12px;">
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button class="btn-action" id="btn-prompt-date-cancel" style="background:transparent; border:1px solid var(--border);">Cancel</button>
+                <button class="btn-action btn-save" id="btn-prompt-date-ok">Confirm</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ============================================================
         // SUPABASE, STATE & CHART CONFIG
@@ -747,6 +758,24 @@
             });
         }
 
+        function customPromptDate(message, defaultValue = "") {
+            return new Promise((resolve) => {
+                document.getElementById('modal-prompt-date-msg').innerText = message;
+                const input = document.getElementById('modal-prompt-date-input');
+                input.value = defaultValue;
+                openModal('modal-prompt-date');
+                
+                document.getElementById('btn-prompt-date-ok').onclick = () => {
+                    closeModal('modal-prompt-date');
+                    resolve(input.value);
+                };
+                document.getElementById('btn-prompt-date-cancel').onclick = () => {
+                    closeModal('modal-prompt-date');
+                    resolve(null);
+                };
+            });
+        }
+
         // ============================================================
         // INITIALIZATION & REFRESH LOGIC
         // ============================================================
@@ -783,13 +812,36 @@
                 const { data: clients, error: errC } = await supabaseClient.from('clients').select('*');
                 const { data: projects, error: errP } = await supabaseClient.from('projects').select('*, expenses(id, category_name, amount, actual_amount, description), payments(*)');
 
-                if (errC) {
-                    console.error("Supabase Clients Fetch Error:", errC);
-                    throw new Error(`Clients DB Error: ${errC.message}`);
-                }
-                if (errP) {
-                    console.error("Supabase Projects Fetch Error:", errP);
-                    throw new Error(`Projects DB Error: ${errP.message}`);
+                if (errC) throw new Error(`Clients DB Error: ${errC.message}`);
+                if (errP) throw new Error(`Projects DB Error: ${errP.message}`);
+
+                // Deduplicate expenses and payments returned by the DB! This prevents duplicate records from piling up.
+                if (projects) {
+                    projects.forEach(p => {
+                        if (p.expenses) {
+                            const uExp = {};
+                            p.expenses.forEach(e => {
+                                if (!uExp[e.category_name] || e.id > uExp[e.category_name].id) {
+                                    uExp[e.category_name] = e;
+                                }
+                            });
+                            p.expenses = Object.values(uExp);
+                        }
+                        if (p.payments) {
+                            const uPay = {};
+                            const cPay = [];
+                            p.payments.forEach(pay => {
+                                if (pay.type === 'Advance' || pay.type === 'Balance') {
+                                    if (!uPay[pay.type] || pay.id > uPay[pay.type].id) uPay[pay.type] = pay;
+                                } else {
+                                    cPay.push(pay);
+                                }
+                            });
+                            if (uPay['Advance']) cPay.push(uPay['Advance']);
+                            if (uPay['Balance']) cPay.push(uPay['Balance']);
+                            p.payments = cPay;
+                        }
+                    });
                 }
 
                 state.dbClients = clients || [];
@@ -1453,7 +1505,19 @@
 
             baseCategories.forEach(c => state.expensesMap[c] = { id: null, estimate: 0, actual: null, subItems: [] });
             
+            let loadedSubtotal = 0;
+            let loadedMisc = 0;
+            let loadedCut = 0;
+
             if (p.expenses) {
+                // Determine raw loaded subtotal to accurately verify if auto-calc was overridden
+                p.expenses.forEach(e => {
+                    const amt = Number(e.amount) || 0;
+                    if (e.category_name === 'Miscellaneous') loadedMisc = amt;
+                    else if (e.category_name === 'Company Cut') loadedCut = amt;
+                    else loadedSubtotal += amt;
+                });
+
                 p.expenses.forEach(e => {
                     const c = e.category_name;
                     let parsedDetails = [];
@@ -1471,11 +1535,19 @@
                         state.expensesMap[c].id = e.id;
                         state.expensesMap[c].subItems = parsedDetails;
                     }
-                    state.expensesMap[c].estimate = Number(e.amount) || 0;
+                    
+                    const estAmt = Number(e.amount) || 0;
+                    state.expensesMap[c].estimate = estAmt;
                     state.expensesMap[c].actual = e.actual_amount !== null && e.actual_amount !== undefined ? Number(e.actual_amount) : null;
 
-                    if (c === 'Miscellaneous' && state.expensesMap[c].estimate > 0) state.manualMisc = true;
-                    if (c === 'Company Cut' && state.expensesMap[c].estimate > 0) state.manualCut = true;
+                    // Verify if values match auto-calc templates, otherwise set manual override
+                    if (c === 'Miscellaneous' && estAmt > 0) {
+                        if (Math.abs(estAmt - (loadedSubtotal * 0.10)) > 2) state.manualMisc = true;
+                    }
+                    if (c === 'Company Cut' && estAmt > 0) {
+                        const expectedMisc = state.manualMisc ? loadedMisc : (loadedSubtotal * 0.10);
+                        if (Math.abs(estAmt - ((loadedSubtotal + expectedMisc) * 0.28)) > 2) state.manualCut = true;
+                    }
                 });
             }
 
@@ -1485,9 +1557,15 @@
             document.getElementById('inp-actors').value = p.actors || 0;
             document.getElementById('inp-videos').value = p.videos || 1;
             document.getElementById('inp-photos').value = p.photos || 0;
-            renderEstimateExpenses();
+            
+            document.getElementById('inp-total-val').value = p.total_value || 0;
+            
+            // Register exactly what the saved estimate total was, to allow smart syncing
+            const loadedGrand = loadedSubtotal + loadedMisc + loadedCut;
+            document.getElementById('rev-display-est-grand').dataset.rawValue = loadedGrand;
 
-            document.getElementById('inp-total-val').value = p.total_value || document.getElementById('val-est-grand').innerText.replace(/[₹,]/g, '') || 0;
+            renderEstimateExpenses(); // Will auto-sync inp-total-val if it accurately matches old estimates
+
             document.getElementById('inp-pay-date').value = new Date().toISOString().split('T')[0];
             calculateSplits();
             updatePaymentUI();
@@ -1630,10 +1708,19 @@
             if (document.activeElement !== inpCut) inpCut.value = state.manualCut ? Math.round(cut) : (Math.round(cut) || "");
             
             document.getElementById('val-est-grand').innerText = formatINR(grand);
-            document.getElementById('rev-display-est-grand').innerText = formatINR(grand);
+            
+            const revGrandEl = document.getElementById('rev-display-est-grand');
+            let oldGrand = Number(revGrandEl.dataset.rawValue) || 0;
+            
+            revGrandEl.innerText = formatINR(grand);
+            revGrandEl.dataset.rawValue = grand;
 
-            if(!state.selectedProject.total_value) {
-                document.getElementById('inp-total-val').value = Math.round(grand);
+            let currentInvoice = Number(document.getElementById('inp-total-val').value) || 0;
+            
+            // Auto-sync invoice value if it perfectly matched old estimates (avoids locking value prematurely)
+            if (currentInvoice === 0 || currentInvoice === Math.round(oldGrand) || currentInvoice === Math.round(oldGrand * 1.18)) {
+                let wasGST = (currentInvoice > 0 && currentInvoice === Math.round(oldGrand * 1.18));
+                document.getElementById('inp-total-val').value = wasGST ? Math.round(grand * 1.18) : Math.round(grand);
                 calculateSplits();
             }
 
@@ -1770,7 +1857,6 @@
             document.getElementById('val-total-received').innerText = formatINR(totalReceived);
             document.getElementById('val-total-pending').innerText = formatINR(pendingAmount > 0 ? pendingAmount : 0);
 
-            // Restore tick/cross active states
             const btnAdvPend = document.getElementById('btn-adv-pend');
             const btnAdvRec = document.getElementById('btn-adv-rec');
             const btnBalPend = document.getElementById('btn-bal-pend');
@@ -1847,10 +1933,32 @@
                 updated_at: timestamp
             };
 
+            // Deduct from Advance/Balance logically BEFORE saving
+            let advVal = Number(document.getElementById('inp-advance-val').value) || 0;
+            let balVal = Number(document.getElementById('inp-balance-val').value) || 0;
+            let isAdvPaid = state.currentPayments.some(p => p.type === 'Advance' && p.status === 'Received');
+            
+            if (!isAdvPaid && advVal > 0) {
+                if (amountVal >= advVal) {
+                    let remainder = amountVal - advVal;
+                    advVal = 0;
+                    balVal = Math.max(0, balVal - remainder);
+                } else {
+                    advVal -= amountVal;
+                }
+            } else {
+                balVal = Math.max(0, balVal - amountVal);
+            }
+
+            // Update UI inputs so saveProjectData grabs the right adjusted values
+            document.getElementById('inp-advance-val').value = advVal;
+            document.getElementById('inp-balance-val').value = balVal;
+            const totalInvoice = Number(document.getElementById('inp-total-val').value) || 0;
+            updateSplitLabels(totalInvoice, advVal, balVal);
+
             let { data, error } = await supabaseClient.from('payments').insert(newPay).select();
             
             if (error) {
-                // Smart Fallback: Sometimes strict DB columns reject explicit 'updated_at' values. Let's try without it!
                 console.warn("DB rejected insert. Retrying without updated_at...", error);
                 delete newPay.updated_at;
                 const retry = await supabaseClient.from('payments').insert(newPay).select();
@@ -1858,14 +1966,10 @@
                 if (retry.error) {
                     console.error("Retry failed:", retry.error);
                     showToast("Saved locally (DB sync failed)");
-                    // Ensure the UI unblocks and correctly updates "Total Received" locally!
                     data = [{ ...newPay, id: Date.now(), updated_at: timestamp }];
                 } else {
                     data = retry.data;
-                    showToast("Payment Added ✅");
                 }
-            } else {
-                showToast("Payment Added ✅");
             }
 
             if (data && data.length) {
@@ -1874,6 +1978,9 @@
             }
 
             document.getElementById('inp-pay-amount').value = '';
+            
+            // Sync the adjusted Advance/Balance amounts to DB
+            await saveProjectData('REV', "Payment Added & Split Adjusted ✅");
             
             updatePaymentUI();
             updateGlobalDashboard();
@@ -1896,23 +2003,44 @@
             const amt = type === 'Advance' ? Number(document.getElementById('inp-advance-val').value) : Number(document.getElementById('inp-balance-val').value);
             let existing = state.currentPayments.find(p => p.type === type);
             
-            const timestamp = new Date().toISOString();
+            let timestamp = new Date().toISOString();
+            
+            if (status === 'Received') {
+                const dateInput = await customPromptDate(`Enter date for ${type} payment:`, timestamp.split('T')[0]);
+                if (dateInput === null) return; // User cancelled
+                if (dateInput) {
+                    timestamp = new Date(dateInput).toISOString();
+                }
+            }
             
             if (existing) {
                 existing.status = status;
                 existing.expected_amount = amt;
                 existing.updated_at = timestamp;
-                await supabaseClient.from('payments').update({ status, expected_amount: amt, updated_at: timestamp }).eq('id', existing.id);
+                
+                const { error } = await supabaseClient.from('payments').update({ status, expected_amount: amt, updated_at: timestamp }).eq('id', existing.id);
+                if (error) {
+                    console.warn("DB rejected update. Retrying without updated_at...", error);
+                    await supabaseClient.from('payments').update({ status, expected_amount: amt }).eq('id', existing.id);
+                }
             } else {
                 const newPay = { project_id: state.selectedProject.id, type, status, expected_amount: amt || 0, updated_at: timestamp };
-                const { data } = await supabaseClient.from('payments').insert(newPay).select();
+                
+                let { data, error } = await supabaseClient.from('payments').insert(newPay).select();
+                if (error) {
+                    console.warn("DB rejected insert. Retrying without updated_at...", error);
+                    delete newPay.updated_at;
+                    const retry = await supabaseClient.from('payments').insert(newPay).select();
+                    data = retry.data;
+                }
+                
                 if(data && data.length) {
                     state.currentPayments.push(data[0]);
                 }
             }
             state.selectedProject.payments = state.currentPayments;
             updatePaymentUI();
-            showToast("Payment Status Updated");
+            showToast("Payment Status Updated ✅");
             updateGlobalDashboard();
         }
 
@@ -1946,12 +2074,10 @@
 
             Object.keys(state.expensesMap).forEach(cat => {
                 if (cat === 'Company Cut' || cat === 'Miscellaneous') return;
-
                 const est = state.expensesMap[cat].estimate || 0;
                 totalEstSub += est;
             });
 
-            // Calculate actual total operational spend
             Object.keys(state.expensesMap).forEach(cat => {
                 if (cat === 'Company Cut') return; // Completely hide Company Cut from actuals total
 
@@ -1967,7 +2093,6 @@
 
             const grandTotalEst = totalEstSub + miscEst + cutEst;
 
-            // Detail Panel update
             document.getElementById('act-breakdown-sub').innerText = formatINR(totalEstSub);
             document.getElementById('act-breakdown-misc').innerText = formatINR(miscEst);
             document.getElementById('act-breakdown-cut').innerText = formatINR(cutEst);
@@ -1979,7 +2104,6 @@
             const diff = totalInvoice - grandTotalEst;
             const gstNote = document.getElementById('act-breakdown-gst-note');
             if (diff > 0) {
-                // If it looks like 18% GST addition
                 if (Math.abs(diff - (grandTotalEst * 0.18)) < 10) {
                     gstNote.innerText = "+ ₹" + Math.round(diff).toLocaleString('en-IN') + " (18% GST included)";
                 } else {
@@ -1994,7 +2118,6 @@
                 gstNote.style.color = "var(--text-muted)";
             }
 
-            // Summary Panel update (Budget Variance = Grand Total - Actual Spend)
             document.getElementById('val-act-spent-total').innerText = formatINR(totalAct);
 
             const variance = grandTotalEst - totalAct;
@@ -2067,7 +2190,6 @@
                 const subItems = state.expensesMap[cat].subItems || [];
                 const isSplit = subItems.length > 0;
                 
-                // Allow empty inputs natively & Convert 0 to blank
                 let displayAct = act;
                 if (displayAct === null || displayAct === undefined) {
                     displayAct = isSplit ? subItems.reduce((s, i) => s + (Number(i.amount)||0), 0) : ''; 
@@ -2144,7 +2266,6 @@
 
         function updateActualMap(cat, val) {
             if(!state.expensesMap[cat]) state.expensesMap[cat] = {id:null, estimate:0, actual:null, subItems:[]};
-            // Map empty strings explicitly back to null
             state.expensesMap[cat].actual = val === '' ? null : Number(val);
             updateActualsTotals();
             markDirty();
@@ -2178,7 +2299,6 @@
 
             const totalVal = Number(document.getElementById('inp-total-val').value) || 0;
             
-            // Only if the user explicitly clicked "Sync Actuals" (ACT) do we formalize empty ones into permanent Actuals
             if (tabSource === 'ACT') {
                 for (let cat in state.expensesMap) {
                     if (state.expensesMap[cat].actual === null && (!state.expensesMap[cat].subItems || state.expensesMap[cat].subItems.length === 0)) {
@@ -2392,7 +2512,14 @@
                 updated_at: new Date().toISOString()
             };
             
-            const { data } = await supabaseClient.from('payments').insert(newPay).select();
+            let { data, error } = await supabaseClient.from('payments').insert(newPay).select();
+            if (error) {
+                console.warn("DB rejected insert. Retrying without updated_at...", error);
+                delete newPay.updated_at;
+                const retry = await supabaseClient.from('payments').insert(newPay).select();
+                data = retry.data;
+            }
+            
             if(data && data.length) {
                 if(!p.payments) p.payments = [];
                 p.payments.push(data[0]);
