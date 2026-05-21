@@ -1,5339 +1,2625 @@
 <!DOCTYPE html>
-
 <html lang="en">
-
 <head>
-
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Agency Finance OS | AIGFOX</title>
 
-
-
-    <!-- Fonts -->
-
     <link rel="preconnect" href="https://fonts.googleapis.com">
-
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
     
-
-    <!-- Libraries -->
-
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-
-
     <style>
-
         /* --- APP STYLES (Dark Theme) --- */
-
         :root {
-
             --bg-app: #0f172a; --bg-card: #1e293b; --bg-input: #334155;
-
             --primary: #6366f1; --primary-hover: #4f46e5; --whatsapp: #25D366;
-
             --danger: #ef4444; --success: #10b981; --warning: #f59e0b; --info: #3b82f6;
-
             --text-main: #f8fafc; --text-muted: #94a3b8;
-
             --border: rgba(255, 255, 255, 0.08); --radius: 16px;
-
         }
 
-
-
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: var(--bg-app); color: var(--text-main); margin: 0; padding: 20px; min-height: 100vh; }
-
         
-
         /* Padding to clear the bottom nav bar */
-
         #app { max-width: 480px; margin: 0 auto; position: relative; padding-bottom: 90px; }
 
-
-
         h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 24px; letter-spacing: -0.5px; }
-
         h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 16px; font-weight: 600; }
 
-
-
         .nav-btn { background: none; border: none; color: var(--text-muted); display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 0; margin-bottom: 20px; font-weight: 500; font-family: inherit; font-size: 0.95rem; }
-
         .nav-btn:hover { color: var(--text-main); }
 
-
-
         .view { display: none; animation: slideUp 0.3s ease-out; }
-
         .view.active { display: block; }
-
         @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-
-
         .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; cursor: pointer; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center; }
-
         .card:hover { transform: translateY(-2px); border-color: rgba(99, 102, 241, 0.3); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2); }
-
         .chart-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 24px; }
 
-
-
         /* --- GLOBAL FILTERS & HERO --- */
-
         .global-filter { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-
         .global-filter select { width: auto; padding: 8px 16px; border-radius: 20px; background: var(--bg-card); border: 1px solid var(--border); font-size: 0.85rem; font-weight: 600; cursor: pointer; }
-
         
-
         .hero-dashboard { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); border: 1px solid var(--border); border-radius: 20px; padding: 24px; margin-bottom: 20px; color: white; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); position: relative; }
-
         .db-status { position: absolute; top: 20px; right: 20px; display: flex; align-items: center; gap: 6px; font-size: 0.65rem; font-weight: 700; color: rgba(255,255,255,0.7); background: rgba(0, 0, 0, 0.2); padding: 4px 8px; border-radius: 20px; }
-
         .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #666; }
-
         .status-dot.online { background: var(--success); box-shadow: 0 0 8px var(--success); }
-
         .status-dot.offline { background: var(--danger); }
-
         
-
         .hero-header { display: flex; align-items: center; gap: 15px; margin-bottom: 24px; }
-
         .hero-logo { width: 44px; height: 44px; background: rgba(255, 255, 255, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1rem; }
-
         
-
         .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
-
         .stat-item h4 { font-size: 0.7rem; color: var(--text-muted); font-weight: 600; margin: 0 0 4px 0; text-transform: uppercase; }
-
         .stat-item p { font-size: 1.2rem; font-weight: 800; margin: 0; }
 
-
-
         /* --- BOTTOM NAVIGATION BAR --- */
-
         .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(10px); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 12px 0; z-index: 1000; padding-bottom: calc(12px + env(safe-area-inset-bottom)); border-radius: 24px 24px 0 0; }
-
         .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-muted); cursor: pointer; font-size: 0.75rem; font-weight: 600; flex: 1; transition: 0.2s; border: none; background: transparent; outline: none; font-family: inherit;}
-
         .nav-item.active { color: var(--primary); }
-
         .nav-icon { font-size: 1.3rem; margin-bottom: 2px;}
 
-
-
         /* --- 3-WAY TOGGLE TABS --- */
-
         .toggle-group { background: var(--bg-card); border: 1px solid var(--border); padding: 4px; border-radius: 12px; display: flex; margin-bottom: 24px; }
-
         .toggle-option { flex: 1; text-align: center; padding: 10px 4px; border-radius: 8px; font-weight: 600; font-size: 0.8rem; cursor: pointer; color: var(--text-muted); transition: 0.3s ease; display: flex; flex-direction: column; align-items: center; gap: 4px;}
-
         .toggle-option span { font-size: 1.2rem; }
-
         .toggle-option.active { background: var(--bg-input); color: white; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
 
-
-
         /* --- INPUTS & FORMS --- */
-
         input, select, textarea { width: 100%; background: var(--bg-input); border: 1px solid transparent; color: white; padding: 14px; border-radius: 12px; font-family: inherit; font-size: 0.95rem; outline: none; transition: 0.2s;}
-
         input:focus, select:focus, textarea:focus { border-color: var(--primary); }
-
         input[readonly] { background: rgba(0, 0, 0, 0.1); color: var(--text-muted); }
-
         input::placeholder { color: rgba(255, 255, 255, 0.2); }
-
         
-
         .form-group { margin-bottom: 16px; }
-
         .form-group label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 8px; font-weight: 500; }
-
         
-
         .logistics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 24px; }
-
         .category-selector { display: flex; gap: 8px; margin-bottom: 24px; }
-
         .cat-btn { flex: 1; background: var(--bg-input); border: 1px solid var(--border); color: var(--text-muted); padding: 12px 8px; border-radius: 12px; font-size: 0.75rem; cursor: pointer; font-weight: 600; text-align: center; }
-
         .cat-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
 
-
-
         /* --- EXPENSE ROWS (Estimate & Actuals) --- */
-
         .expense-row { display: grid; grid-template-columns: 1fr 100px 40px; gap: 10px; align-items: center; margin-bottom: 12px; background: rgba(0,0,0,0.1); padding: 8px 12px; border-radius: 12px; border: 1px solid var(--border); position: relative; z-index: 2;}
-
         .expense-row.actual-mode { grid-template-columns: 1fr auto auto auto; padding: 12px 16px; }
-
         .expense-row label { font-size: 0.9rem; font-weight: 500; }
-
         .expense-row .est-label { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;}
-
         .expense-input-wrapper { display: flex; align-items: center; gap: 5px; background: var(--bg-card); padding: 4px 8px; border-radius: 8px; }
-
         .expense-input-wrapper span { color: var(--text-muted); font-weight: 600; font-size: 0.85rem;}
-
         .expense-input-wrapper input { padding: 4px; text-align: right; background: transparent; width: 100%; border: none;}
-
         .btn-del { background: none; border: none; color: var(--danger); font-size: 1.2rem; cursor: pointer; opacity: 0.7; display: flex; align-items: center; justify-content: center;}
-
         .btn-add-expense { background: transparent; border: 1px dashed var(--text-muted); color: var(--text-muted); width: 100%; padding: 12px; border-radius: 12px; margin-bottom: 24px; font-size: 0.9rem; cursor: pointer; transition: 0.2s;}
-
         .btn-add-expense:hover { border-color: var(--primary); color: var(--text-main); }
 
-
-
         /* Sub-expense (Splits) Styling */
-
         .sub-expense-container { background: rgba(0,0,0,0.15); border-radius: 0 0 12px 12px; border: 1px solid var(--border); border-top: none; margin-top: -16px; margin-bottom: 12px; padding: 16px 8px 8px 8px; position: relative; z-index: 1;}
-
         .sub-expense-row { display: grid; grid-template-columns: 1fr 100px 30px; gap: 8px; align-items: center; margin-bottom: 8px; padding-left: 20px; position: relative;}
-
         .sub-expense-row::before { content: ''; position: absolute; left: 10px; top: -12px; bottom: 50%; width: 2px; background: var(--border); border-radius: 2px;}
-
         .sub-expense-row::after { content: ''; position: absolute; left: 10px; top: 50%; width: 10px; height: 2px; background: var(--border); border-radius: 2px;}
-
         .btn-split { background: transparent; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: var(--text-muted); padding: 4px 8px; font-size: 0.7rem; cursor: pointer; transition: 0.2s;}
-
         .btn-split:hover { background: rgba(255,255,255,0.1); color: var(--text-main); }
 
-
-
         /* --- REVENUE SPLIT UI --- */
-
         .total-amount-box { text-align: center; margin: 10px 0 20px 0; padding: 20px; background: rgba(0,0,0,0.2); border-radius: var(--radius); border: 1px dashed var(--border); transition: 0.2s;}
-
         .total-amount-box:focus-within { border-color: var(--success); background: rgba(16, 185, 129, 0.05); }
-
         .amount-input { font-size: 2.2rem; font-weight: 800; background: transparent; border: none; text-align: center; width: 100%; color: var(--success); outline: none; font-family: inherit; padding: 0;}
-
         .split-branch { display: flex; justify-content: space-between; position: relative; padding-top: 20px; margin-top: 10px; }
-
         .split-branch::before { content: ''; position: absolute; top: 0; left: 25%; right: 25%; height: 2px; background: var(--border); }
-
         .split-branch::after { content: ''; position: absolute; top: 0; left: 50%; width: 2px; height: 15px; background: var(--border); }
-
         .branch-item { text-align: center; flex: 1; }
-
         .status-circles { display: flex; justify-content: center; gap: 12px; margin-top: 12px; }
-
         .circle-btn { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--bg-input); background: var(--bg-card); color: var(--text-muted); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; cursor: pointer; transition: 0.2s; outline: none; }
-
         .circle-btn.cross.active { border-color: var(--danger); background: rgba(239, 68, 68, 0.15); color: var(--danger); box-shadow: 0 0 10px rgba(239, 68, 68, 0.2); }
-
         .circle-btn.tick.active { border-color: var(--success); background: rgba(16, 185, 129, 0.15); color: var(--success); box-shadow: 0 0 10px rgba(16, 185, 129, 0.2); }
 
-
-
         /* --- CALC SUMMARY CARD --- */
-
         .calc-card { background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-top: 24px; }
-
         .calc-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 0.95rem; color: var(--text-muted); }
-
         .calc-row span:last-child { font-weight: 700; color: var(--text-main); }
-
         .calc-row.total { border-top: 1px solid var(--border); padding-top: 16px; margin-top: 8px; font-size: 1.15rem; font-weight: 800; color: var(--primary); }
-
         .calc-input { width: 100px; padding: 6px 10px; text-align: right; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border); border-radius: 8px; color: white; font-weight: 600;}
 
-
-
         /* --- CALENDAR UI --- */
-
         .cal-wrapper { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-
         .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-
         .cal-header h3 { margin: 0; font-size: 1.15rem; font-weight: 800; }
-
         .cal-nav-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-main); border-radius: 8px; width: 32px; height: 32px; cursor: pointer; display:flex; align-items:center; justify-content:center; transition:0.2s;}
-
         .cal-nav-btn:hover { background: rgba(255,255,255,0.1); }
-
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
-
         .cal-day-name { font-size: 0.75rem; color: var(--text-muted); font-weight: 700; margin-bottom: 8px; }
-
         .cal-day { position: relative; height: 38px; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; font-weight: 600; border-radius: 10px; cursor: pointer; color: var(--text-main); transition: 0.2s; }
-
         .cal-day:hover { background: rgba(255,255,255,0.05); }
-
         .cal-day.empty { visibility: hidden; }
-
         .cal-day.today { color: var(--success); font-weight: 800; border: 2px solid rgba(16, 185, 129, 0.4); }
-
         .cal-day.has-event { background: rgba(59, 130, 246, 0.2); color: var(--info); font-weight: 800; }
-
         .cal-day.selected { background: var(--primary) !important; color: white !important; border-color: transparent !important; box-shadow: 0 4px 10px rgba(99, 102, 241, 0.4); }
 
-
-
         /* --- BUTTONS --- */
-
         .btn-group { display: flex; flex-direction: column; gap: 10px; margin-top: 24px; }
-
         .btn-action { width: 100%; padding: 16px; border-radius: 14px; font-size: 1rem; font-weight: 700; cursor: pointer; border: none; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.2s; font-family: inherit;}
-
         .btn-action:active { transform: scale(0.98); }
-
         .btn-save { background: var(--primary); color: white; }
-
         .btn-whatsapp { background: var(--whatsapp); color: white; }
-
         .btn-pdf { background: #fff; color: #000; }
-
         .btn-add-card { background: rgba(99, 102, 241, 0.05); border: 1px dashed var(--primary); color: var(--primary); display: flex; justify-content: center; font-weight: 600; margin-top: 20px; }
 
-
-
         /* --- GLOBAL REFRESH --- */
-
         #global-refresh-btn { position: fixed; bottom: 90px; right: 20px; width: 50px; height: 50px; border-radius: 50%; background: var(--primary); color: white; border: none; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4); display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 1000; transition: 0.2s; }
-
         #global-refresh-btn:active { transform: scale(0.9); }
-
         #global-refresh-btn.spinning svg { animation: spin 1s linear infinite; }
-
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
-
-
         /* --- MODALS & OVERLAYS --- */
-
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(8px); z-index: 1000; display: none; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s; }
-
         .modal-overlay.open { display: flex; opacity: 1; }
-
         .modal { background: var(--bg-card); border: 1px solid var(--border); width: 90%; max-width: 400px; padding: 24px; border-radius: 24px; transform: scale(0.9); transition: transform 0.3s; max-height: 90vh; overflow-y: auto; }
-
         .modal-overlay.open .modal { transform: scale(1); }
-
         
-
         #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px); background: white; color: black; padding: 12px 24px; border-radius: 50px; font-weight: 700; opacity: 0; pointer-events: none; transition: all 0.3s; z-index: 2000; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-
         #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-
-
         #loading-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #ffffff; z-index: 9999; display: none; flex-direction: column; justify-content: center; align-items: center; color: #111; }
-
         .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #111; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 20px; }
-
     </style>
-
 </head>
-
 <body>
 
-
-
     <div id="loading-overlay"><div class="spinner"></div><div style="font-weight: 600;">Processing...</div></div>
-
     <div id="toast">✅ Success</div>
 
-
-
     <div id="app">
-
-        <!-- ================= VIEW 1: DASHBOARD (HOME) ================= -->
-
         <div id="view-dashboard" class="view active">
-
             
-
             <div class="global-filter">
-
                 <h1 style="margin: 0;">Overview</h1>
-
                 <div style="display: flex; gap: 10px;">
-
                     <select id="global-month-filter" onchange="handleYearChange()">
-
                         <option value="All">All Months</option>
-
-                        <!-- Filled by JS -->
-
-                    </select>
-
+                        </select>
                     <select id="global-year-filter" onchange="handleYearChange()">
-
                         <option value="All Time">All Time</option>
-
                         <option value="2026" selected>2026</option>
-
                         <option value="2025">2025</option>
-
                     </select>
-
                 </div>
-
             </div>
-
-
 
             <div class="hero-dashboard">
-
                 <div class="db-status">
-
                     <div id="conn-dot" class="status-dot"></div><span id="conn-text">SYNCING</span>
-
                 </div>
-
                 
-
                 <div class="hero-header" style="margin-bottom: 15px;">
-
                     <div class="hero-logo">AO</div>
-
                     <div>
-
                         <div style="font-size: 1.1rem; font-weight: 800;">FINANCE OS</div>
-
                         <div style="font-size: 0.8rem; color: var(--text-muted);">Growth Dashboard</div>
-
                     </div>
-
                 </div>
-
-
 
                 <div style="padding-bottom: 15px;">
-
                     <div class="stat-item" style="margin-bottom: 15px;">
-
                         <h4>TOTAL BOOKED REVENUE</h4>
-
                         <p id="dash-rev-booked" style="font-size: 2.2rem; color: var(--text-main);">₹0</p>
-
                     </div>
-
-
 
                     <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.15); padding: 12px; border-radius: 12px; margin-bottom: 10px;">
-
                         <div class="stat-item">
-
-                            <h4 style="color: var(--info);">NET PROFIT</h4>
-
+                            <h4 style="color: var(--info);">NET REVENUE</h4>
                             <p id="dash-net-profit" style="font-size: 1.2rem; color: var(--info);">₹0</p>
-
                         </div>
-
                         <div class="stat-item" style="text-align: right;">
-
                             <h4 style="color: var(--danger);">TOTAL SPEND</h4>
-
                             <p id="dash-total-spent" style="font-size: 1.2rem; color: var(--danger); margin: 0;">₹0</p>
-
                         </div>
-
                     </div>
-
-
 
                     <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.15); padding: 12px; border-radius: 12px;">
-
                         <div class="stat-item">
-
                             <h4 style="color: var(--success);">AMOUNT RECEIVED</h4>
-
                             <p id="dash-rev-received" style="font-size: 1.2rem; color: var(--success);">₹0</p>
-
                         </div>
-
                         <div class="stat-item" style="text-align: right;">
-
                             <h4 style="color: var(--warning);">PENDING BALANCE</h4>
-
                             <p id="dash-rev-pending" style="font-size: 1.2rem; color: var(--warning); margin: 0;">₹0</p>
-
                             <div id="dash-rev-previous" style="font-size: 0.7rem; color: rgba(255,255,255,0.5); margin-top: 4px; font-weight: 600; display: none;"></div>
-
                         </div>
-
                     </div>
-
                 </div>
-
             </div>
-
-
-
-            <!-- Expense Breakdown Doughnut Chart -->
 
             <div class="chart-card">
-
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
-
                     <h2 style="margin: 0;">Where amounts went</h2>
-
                     <div style="display:flex; gap:4px; background:rgba(0,0,0,0.2); padding:4px; border-radius:10px;">
-
                         <button id="pie-btn-est" onclick="switchPieView('EST')" style="background:transparent; border:none; color:var(--text-muted); padding:4px 8px; font-size:0.7rem; font-weight:700; border-radius:8px; cursor:pointer; transition:0.2s;">ESTIMATE</button>
-
                         <button id="pie-btn-act" onclick="switchPieView('ACT')" style="background:var(--primary); border:none; color:white; padding:4px 8px; font-size:0.7rem; font-weight:700; border-radius:8px; cursor:pointer; transition:0.2s;">ACTUALS</button>
-
                     </div>
-
                 </div>
-
                 <div style="position: relative; height: 220px; width: 100%;">
-
                     <canvas id="expensePieChart"></canvas>
-
                 </div>
-
             </div>
-
         </div>
-
-
-
-        <!-- ================= VIEW 2: MONTHS TIMELINE ================= -->
 
         <div id="view-months" class="view">
-
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
-
                 <h1 style="margin: 0;">Timeline</h1>
-
             </div>
-
             <div style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 16px;">Select a month to view projects</div>
-
             
-
             <div id="months-list"></div>
-
         </div>
-
-
-
-        <!-- ================= VIEW 3: CLIENTS / PROJECTS ================= -->
 
         <div id="view-clients" class="view">
-
             <button class="nav-btn" onclick="router('months')">← Back to Timeline</button>
-
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
-
                 <h1 id="client-header" style="margin: 0;">Clients</h1>
-
             </div>
-
-
 
             <div id="clients-list"></div>
-
             <div class="card btn-add-card" onclick="openModal('modal-client')">
-
                 <span>+ Add New Client</span>
-
             </div>
-
         </div>
-
-
-
-        <!-- ================= VIEW 4: PROJECT SELECTION ================= -->
 
         <div id="view-projects" class="view">
-
             <button class="nav-btn" onclick="router('clients')">← Back to Clients</button>
-
             <h1 id="project-header">Projects</h1>
-
             <div id="projects-list"></div>
-
             <div class="card btn-add-card" onclick="openModal('modal-project')">
-
                 <span>+ Add New Project</span>
-
             </div>
-
         </div>
-
-
-
-        <!-- ================= VIEW 5: PROJECT DETAILS (3 TABS) ================= -->
 
         <div id="view-details" class="view">
-
             <button class="nav-btn" onclick="router('projects')">← Back to Projects</button>
-
             <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 20px;">
-
                 <div>
-
                     <h1 id="detail-project-name" style="margin-bottom: 4px; font-size: 1.4rem;">Project Name</h1>
-
                     <div style="display:flex; align-items:center; gap: 10px;">
-
                         <div id="detail-client-name" style="color: var(--text-muted); font-weight: 500; font-size: 0.9rem;">Client Name</div>
-
                         <select id="project-status" onchange="changeProjectStatus(this.value)" style="padding: 4px 10px; border-radius: 12px; font-size: 0.7rem; background: var(--bg-input); color: white; border: none; width: auto; font-weight: 700; outline: none; cursor: pointer;">
-
                             <option value="Estimate">🟡 Estimate Only</option>
-
                             <option value="Confirmed">🟢 Confirmed</option>
-
                             <option value="Completed">🔵 Completed</option>
-
                             <option value="Dropped">🔴 Dropped</option>
-
                         </select>
-
                     </div>
-
                 </div>
-
                 <button class="btn-del" onclick="handleDeleteCurrentProject()" style="padding:5px;">🗑️</button>
-
             </div>
-
-
 
             <div class="toggle-group">
-
                 <div id="tab-btn-est" class="toggle-option active" onclick="switchTab('EST')"><span>📝</span> Estimate</div>
-
                 <div id="tab-btn-rev" class="toggle-option" onclick="switchTab('REV')"><span>💰</span> Revenue</div>
-
                 <div id="tab-btn-act" class="toggle-option" onclick="switchTab('ACT')"><span>📈</span> Actuals</div>
-
             </div>
-
-
-
-            <!-- ESTIMATE TAB -->
 
             <div id="tab-content-est">
-
                 <div class="form-group">
-
                     <label>Video Category</label>
-
                     <div class="category-selector">
-
                         <div class="cat-btn active" id="cat-CONCEPT" onclick="setCategory('CONCEPT')">CONCEPT</div>
-
                         <div class="cat-btn" id="cat-PROMOTIONAL" onclick="setCategory('PROMOTIONAL')">PROMO</div>
-
                         <div class="cat-btn" id="cat-BOTH" onclick="setCategory('BOTH')">BOTH</div>
-
                     </div>
-
                 </div>
-
-
 
                 <div class="form-group">
-
                     <input type="date" id="inp-date" onchange="markDirty()">
-
                 </div>
-
-
 
                 <h2>Logistics</h2>
-
                 <div class="logistics-grid">
-
                     <div><label style="font-size:0.7rem; color:var(--text-muted);">Shoot Days</label><input type="number" id="inp-days" value="1" min="1" onchange="markDirty()"></div>
-
                     <div><label style="font-size:0.7rem; color:var(--text-muted);">Actors</label><input type="number" id="inp-actors" value="0" onchange="markDirty()"></div>
-
                     <div><label style="font-size:0.7rem; color:var(--text-muted);">Videos</label><input type="number" id="inp-videos" value="1" onchange="markDirty()"></div>
-
                     <div><label style="font-size:0.7rem; color:var(--text-muted);">Photos</label><input type="number" id="inp-photos" value="0" onchange="markDirty()"></div>
-
                 </div>
-
-
 
                 <h2>Estimated Expenses</h2>
-
                 <div id="est-expenses-container"></div>
-
                 <button class="btn-add-expense" onclick="addCustomExpenseRow()">+ Add Custom Expense</button>
 
-
-
                 <div class="calc-card">
-
                     <div class="calc-row"><span>Subtotal:</span><span id="val-est-sub">₹0</span></div>
-
                     <div class="calc-row">
-
                         <span style="font-size:0.85rem;">Misc (10%):</span>
-
                         <input type="number" id="inp-est-misc" class="calc-input" oninput="overrideSpecial('Misc', this.value)" placeholder="Auto">
-
                     </div>
-
                     <div class="calc-row">
-
                         <span style="font-size:0.85rem;">Company Cut (28%):</span>
-
                         <input type="number" id="inp-est-cut" class="calc-input" oninput="overrideSpecial('Cut', this.value)" placeholder="Auto">
-
                     </div>
-
                     <div class="calc-row total"><span>Grand Total:</span><span id="val-est-grand">₹0</span></div>
-
                 </div>
-
-
 
                 <div class="btn-group">
-
                     <button class="btn-action btn-save" onclick="saveProjectData('EST')">Save Estimate</button>
-
                 </div>
-
                 
-
                 <h2 style="margin-top:30px; font-size:0.8rem;">Text Preview</h2>
-
                 <textarea id="client-preview-text" style="height: 100px; font-size: 0.8rem; line-height: 1.4; color: var(--text-muted);" readonly></textarea>
-
             </div>
-
-
-
-            <!-- REVENUE TAB -->
 
             <div id="tab-content-rev" style="display: none;">
-
                 
-
-                <!-- GST ADDITION BAR -->
-
                 <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom: 12px; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 12px; border: 1px dashed var(--border);">
-
                     <div style="font-size: 0.85rem; color: var(--text-muted);">Grand Total Est: <br><span id="rev-display-est-grand" style="color:var(--text-main); font-weight:800; font-size: 1.1rem;">₹0</span></div>
-
                     <button id="btn-gst-toggle" onclick="toggleGST()" style="background: rgba(16, 185, 129, 0.15); border: 1px solid var(--success); color: var(--success); border-radius: 8px; padding: 8px 12px; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: 0.2s;">+ Include 18% GST</button>
-
                 </div>
-
-
 
                 <div class="total-amount-box">
-
                     <div style="color: var(--text-muted); font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Total Invoice Value</div>
-
                     <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-
                         <span style="font-size: 1.8rem; color: var(--success); font-weight: 700;">₹</span>
-
                         <input type="number" id="inp-total-val" class="amount-input" value="0" oninput="calculateSplits()" onchange="saveProjectData('REV')">
-
                     </div>
-
                 </div>
-
-
-
-                <!-- RESTORED: Split Branch UI -->
 
                 <div class="split-branch">
-
                     <div class="branch-item">
-
                         <div id="lbl-adv-pct" style="color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">Advance (60%)</div>
-
                         <div style="display: flex; justify-content: center; align-items: center; gap: 2px; margin: 8px 0;">
-
                             <span style="font-size: 1.1rem; font-weight: 700; color: var(--text-main);">₹</span>
-
                             <input type="number" id="inp-advance-val" style="font-size: 1.3rem; font-weight: 700; color: var(--text-main); width: 90px; padding: 4px; text-align: center; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 8px; outline: none;" oninput="handleAdvanceEdit()" onchange="saveProjectData('REV')">
-
                         </div>
-
                         <div class="status-circles">
-
                             <button class="circle-btn cross" id="btn-adv-pend" onclick="setPaymentStatus('Advance', 'Pending')">✖</button>
-
                             <button class="circle-btn tick" id="btn-adv-rec" onclick="setPaymentStatus('Advance', 'Received')">✔</button>
-
                         </div>
-
                     </div>
-
                     <div class="branch-item">
-
                         <div id="lbl-bal-pct" style="color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">Balance (40%)</div>
-
                         <div style="display: flex; justify-content: center; align-items: center; gap: 2px; margin: 8px 0;">
-
                             <span style="font-size: 1.1rem; font-weight: 700; color: var(--text-main);">₹</span>
-
                             <input type="number" id="inp-balance-val" style="font-size: 1.3rem; font-weight: 700; color: var(--text-main); width: 90px; padding: 4px; text-align: center; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 8px; outline: none;" oninput="handleBalanceEdit()" onchange="saveProjectData('REV')">
-
                         </div>
-
                         <div class="status-circles">
-
                             <button class="circle-btn cross" id="btn-bal-pend" onclick="setPaymentStatus('Balance', 'Pending')">✖</button>
-
                             <button class="circle-btn tick" id="btn-bal-rec" onclick="setPaymentStatus('Balance', 'Received')">✔</button>
-
                         </div>
-
                     </div>
-
                 </div>
-
-
-
-                <!-- Payment Summary Box -->
 
                 <div class="calc-card" style="margin-top: 20px; padding: 16px;">
-
                     <div class="calc-row total" style="border: none; padding: 0; margin: 0;">
-
                         <span>Total Received:</span><span id="val-total-received" style="color: var(--success);">₹0</span>
-
                     </div>
-
                     <div class="calc-row" style="margin-top: 8px; margin-bottom: 0;">
-
                         <span>Pending Balance:</span><span id="val-total-pending" style="color: var(--warning);">₹0</span>
-
                     </div>
-
                 </div>
-
-
-
-                <!-- NEW: Record Payment -->
 
                 <div style="margin-top: 24px; background: rgba(0,0,0,0.15); border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
-
                     <h3 style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0; margin-bottom: 12px; text-transform: uppercase;">Record Payment</h3>
-
                     <div style="display: flex; gap: 10px; align-items: center;">
-
                         <input type="date" id="inp-pay-date" style="flex: 1;" title="Payment Date">
-
                         <div class="expense-input-wrapper" style="flex: 1; border: 1px solid var(--border); background: var(--bg-input);">
-
                             <span style="color: var(--success);">₹</span>
-
                             <input type="number" id="inp-pay-amount" placeholder="Amount" style="color: var(--success); font-weight: 700;">
-
                         </div>
-
                         <button onclick="addPaymentRecord()" style="background: var(--success); color: white; border: none; padding: 12px 16px; border-radius: 10px; font-weight: 700; cursor: pointer; transition: 0.2s;">Add</button>
-
                     </div>
-
                 </div>
-
-
-
-                <!-- NEW: Payment Breakdown Table -->
 
                 <div id="revenue-history-container" style="margin-top: 24px;">
-
                     <h3 style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px;">Payment History</h3>
-
                     <div id="revenue-history-list" style="background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden;">
-
-                        <!-- Populated via JS -->
-
-                    </div>
-
+                        </div>
                 </div>
-
             </div>
-
-
-
-            <!-- ACTUALS TAB -->
 
             <div id="tab-content-act" style="display: none;">
-
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-
                     <h2 style="margin:0;">Production Spend (COGS)</h2>
-
                 </div>
-
                 
-
                 <div id="act-expenses-container"></div>
-
                 <button class="btn-add-expense" onclick="addUnexpectedExpense()">+ Add Unexpected Expense</button>
 
-
-
-                <!-- Unified Summary & Variance Card -->
-
                 <div class="calc-card" style="margin-bottom: 24px; padding: 16px;">
-
-                    <!-- Top Actual Spent -->
-
                     <div class="calc-row" style="margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border);">
-
                         <span style="color: var(--text-main); font-weight: 700; font-size: 1.1rem;">Total Actual Spent</span>
-
                         <span id="val-act-spent-total" style="color: var(--warning); font-weight: 800; font-size: 1.4rem;">₹0</span>
-
                     </div>
 
-
-
-                    <!-- Estimation Breakdown -->
-
                     <div class="calc-row" style="margin-bottom: 10px;">
-
                         <div style="display:flex; flex-direction:column;">
-
                             <span style="color: var(--text-main); font-weight: 600;">Estimated Subtotal</span>
-
                         </div>
-
                         <span id="act-breakdown-sub" style="font-weight: 600;">₹0</span>
-
                     </div>
-
                     <div class="calc-row" style="margin-bottom: 10px;">
-
                         <div style="display:flex; flex-direction:column;">
-
                             <span>Miscellaneous</span>
-
                             <span id="act-breakdown-misc-note" style="font-size:0.7rem; color:var(--text-muted);">Amount added (10%)</span>
-
                         </div>
-
                         <span id="act-breakdown-misc">₹0</span>
-
                     </div>
-
                     <div class="calc-row" style="margin-bottom: 10px;">
-
                         <div style="display:flex; flex-direction:column;">
-
                             <span>Company Cut</span>
-
                             <span id="act-breakdown-cut-note" style="font-size:0.7rem; color:var(--text-muted);">Amount added (28%)</span>
-
                         </div>
-
                         <span id="act-breakdown-cut">₹0</span>
-
                     </div>
-
                     <div class="calc-row total" style="border-top: 1px dashed var(--border); padding-top: 12px; margin-top: 10px; margin-bottom: 16px;">
-
                         <span>Grand Total (Est)</span>
-
                         <span id="act-breakdown-grand">₹0</span>
-
                     </div>
-
                     <div class="calc-row" style="margin-bottom: 16px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
-
                         <div style="display:flex; flex-direction:column;">
-
                             <span style="color: var(--success); font-weight: 600;">Total Invoice (Revenue)</span>
-
                             <span id="act-breakdown-gst-note" style="font-size:0.7rem; color:var(--success); opacity: 0.8;">Includes adjustments</span>
-
                         </div>
-
                         <span id="act-breakdown-revenue" style="color: var(--success); font-weight:700;">₹0</span>
-
                     </div>
-
-
-
-                    <!-- Actuals & Real Operational Variance -->
 
                     <div style="border-top: 1px solid var(--border); padding-top: 16px; margin-top: 8px;">
-
                         <div class="calc-row total" style="margin-top: 0; border-top: none; padding-top: 0;">
-
                             <div style="display:flex; flex-direction:column;">
-
                                 <span style="font-size: 0.95rem; text-transform: uppercase;">Budget Variance</span>
-
                                 <span id="act-formula-budget" style="font-size: 0.7rem; color: var(--text-muted); font-weight: normal; text-transform: none;">(Grand Total - Actual Spent)</span>
-
                             </div>
-
                             <span id="val-realized-profit" style="font-size: 1.25rem;">₹0</span>
-
                         </div>
-
                     </div>
-
                 </div>
-
                 
-
                 <div class="btn-group">
-
                     <button class="btn-action" style="background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-main);" onclick="saveProjectData('ACT_DRAFT')">💾 Save Draft (Values only)</button>
-
                     <button class="btn-save btn-action" onclick="saveProjectData('ACT')">✅ Sync Actuals (Finalize remaining to Est)</button>
-
                     <button class="btn-action" style="background: transparent; border: 1px dashed var(--danger); color: var(--danger); font-size: 0.85rem; padding: 12px;" onclick="clearAllActuals()">Reset & Clear All Actuals</button>
-
                 </div>
-
             </div>
-
         </div>
-
-
-
-        <!-- ================= VIEW 6: YEARLY OVERVIEW ================= -->
 
         <div id="view-analytics" class="view">
-
             <h1 style="margin-bottom: 4px;">Yearly Overview</h1>
-
             <div style="color: var(--text-muted); font-weight: 500; font-size: 0.9rem; margin-bottom: 24px;">Business Growth & Trends</div>
 
-
-
-            <!-- Profit Chart -->
-
             <div class="chart-card">
-
                 <h2 style="margin-bottom: 10px;">Profit Growth (Net)</h2>
-
                 <div style="position: relative; height: 200px; width: 100%;">
-
                     <canvas id="profitChart"></canvas>
-
                 </div>
-
             </div>
 
-
-
-            <!-- Growth Chart visualization -->
-
             <div class="chart-card">
-
                 <h2 style="margin-bottom: 10px;">P&L Trend (Full Year)</h2>
-
                 <div style="position: relative; height: 250px; width: 100%;">
-
                     <canvas id="dashboardChart"></canvas>
-
                 </div>
-
             </div>
-
-
-
-            <!-- Project Pipeline Chart -->
 
             <div class="chart-card">
-
                 <h2 style="margin-bottom: 10px;">Booked Project Values</h2>
-
                 <div style="position: relative; height: 200px; width: 100%;">
-
                     <canvas id="projectChart"></canvas>
-
                 </div>
-
             </div>
-
         </div>
-
-
-
-        <!-- ================= VIEW 7: PAYMENTS HUB ================= -->
 
         <div id="view-payments" class="view">
-
             <h1 style="margin-bottom: 4px;">Payments</h1>
-
             <div style="color: var(--text-muted); font-weight: 500; font-size: 0.9rem; margin-bottom: 24px;">Track your cash flow across all projects</div>
 
-
-
             <div id="payments-list">
-
-                <!-- Populated via JS -->
-
-            </div>
-
+                </div>
         </div>
 
-
-
-        <!-- ================= VIEW 8: SHOOT CALENDAR ================= -->
-
         <div id="view-calendar" class="view">
-
             <h1 style="margin-bottom: 4px;">Schedule</h1>
-
             <div style="color: var(--text-muted); font-weight: 500; font-size: 0.9rem; margin-bottom: 24px;">Tap a date to view shoots</div>
-
-
-
-            <!-- The Interactive Calendar Grid -->
 
             <div class="cal-wrapper" id="calendar-ui"></div>
 
-
-
-            <!-- The Filtered Projects List -->
-
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
-
                 <h2 id="calendar-list-title" style="margin:0; color:var(--text-muted);">This Month</h2>
-
             </div>
-
             <div id="calendar-projects-list"></div>
-
         </div>
 
-
-
     </div>
-
-
-
-    <!-- GLOBAL REFRESH BUTTON -->
 
     <button id="global-refresh-btn" onclick="refreshData()" title="Force Sync & Refresh">
-
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-
             <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-
             <path d="M3 3v5h5"/>
-
         </svg>
-
     </button>
 
-
-
-    <!-- MAIN BOTTOM NAVIGATION BAR -->
-
     <div class="bottom-nav">
-
         <button class="nav-item active" id="nav-dashboard" onclick="router('dashboard')">
-
             <div class="nav-icon">📊</div>
-
             <div>Home</div>
-
         </button>
-
         <button class="nav-item" id="nav-months" onclick="router('months')">
-
             <div class="nav-icon">📁</div>
-
             <div>Projects</div>
-
         </button>
-
         <button class="nav-item" id="nav-calendar" onclick="router('calendar')">
-
             <div class="nav-icon">📅</div>
-
             <div>Calendar</div>
-
         </button>
-
         <button class="nav-item" id="nav-payments" onclick="router('payments')">
-
             <div class="nav-icon">💳</div>
-
             <div>Payments</div>
-
         </button>
-
         <button class="nav-item" id="nav-analytics" onclick="router('analytics')">
-
             <div class="nav-icon">📈</div>
-
             <div>Overview</div>
-
         </button>
-
     </div>
-
-
-
-    <!-- ================= MODALS ================= -->
 
     <div id="modal-client" class="modal-overlay">
-
         <div class="modal">
-
             <h3>New Client</h3>
-
             <input type="text" id="modal-client-name" placeholder="Client Name" style="margin-bottom:12px;">
-
             <input type="text" id="modal-project-name" placeholder="Initial Project Name">
-
             <div style="display:flex; gap:10px; margin-top:20px;">
-
                 <button class="btn-action" style="background:transparent; border:1px solid var(--border);" onclick="closeModal('modal-client')">Cancel</button>
-
                 <button class="btn-action btn-save" onclick="submitNewClient()">Create</button>
-
             </div>
-
         </div>
-
     </div>
-
-
 
     <div id="modal-project" class="modal-overlay">
-
         <div class="modal">
-
             <h3>New Project</h3>
-
             <input type="text" id="modal-work-name" placeholder="Project Name">
-
             <div style="display:flex; gap:10px; margin-top:20px;">
-
                 <button class="btn-action" style="background:transparent; border:1px solid var(--border);" onclick="closeModal('modal-project')">Cancel</button>
-
                 <button class="btn-action btn-save" onclick="submitNewProject()">Create</button>
-
             </div>
-
         </div>
-
     </div>
-
-
-
-    <!-- Custom Dialogs to avoid native prompt/confirm blocking -->
 
     <div id="modal-prompt" class="modal-overlay">
-
         <div class="modal">
-
             <h3 id="modal-prompt-msg">Input Required</h3>
-
             <input type="text" id="modal-prompt-input" style="margin-bottom:12px;">
-
             <div style="display:flex; gap:10px; margin-top:20px;">
-
                 <button class="btn-action" id="btn-prompt-cancel" style="background:transparent; border:1px solid var(--border);">Cancel</button>
-
                 <button class="btn-action btn-save" id="btn-prompt-ok">OK</button>
-
             </div>
-
         </div>
-
     </div>
-
-
 
     <div id="modal-confirm" class="modal-overlay">
-
         <div class="modal">
-
             <h3 id="modal-confirm-msg">Confirm Action</h3>
-
             <div style="display:flex; gap:10px; margin-top:20px;">
-
                 <button class="btn-action" id="btn-confirm-cancel" style="background:transparent; border:1px solid var(--border);">Cancel</button>
-
                 <button class="btn-action btn-save" id="btn-confirm-ok" style="background:var(--danger);">Confirm</button>
-
             </div>
-
         </div>
-
     </div>
 
-
-
     <script>
-
         // ============================================================
-
         // SUPABASE, STATE & CHART CONFIG
-
         // ============================================================
-
         const SUPABASE_URL = "https://jtpsnufycomhozsiegjh.supabase.co";
-
         const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0cHNudWZ5Y29taG96c2llZ2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5OTI5NjAsImV4cCI6MjA3NzU2ODk2MH0.SsKcUAjkv4gsTKawOfN-KKzYRkUKoQZj-JZDo8liggc";
-
         var supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-
-
         const baseCategories = ["Director", "Cinematographer", "Actors", "Equipments Rent", "Food & Travel", "Other Crew", "Editors", "Props & Costume"];
-
         const monthsList = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-
-
         const state = {
-
             selectedYear: '2026', 
-
             selectedMonth: 'All', 
-
             selectedClient: null,
-
             selectedProject: null,
-
             
-
             dbProjects: [],
-
             dbClients: [],
-
             
-
             expensesMap: {}, 
-
             customRows: [],
-
             manualMisc: false,
-
             manualCut: false,
-
             
-
             currentPayments: [],
-
             isDirty: false,
 
-
-
             pieDataEst: {},
-
             pieDataAct: {},
-
             currentPieView: 'ACT',
 
-
-
             calYear: new Date().getFullYear(),
-
             calMonth: new Date().getMonth(),
-
             calSelectedDate: null
-
         };
-
-
 
         const formatINR = (n) => "₹" + Math.round(n || 0).toLocaleString('en-IN');
-
         let dashboardChartInstance = null; 
-
         let projectChartInstance = null;
-
         let expensePieChartInstance = null;
-
         let profitChartInstance = null;
-
         let autosaveTimer = null;
 
-
-
         function triggerAutosave() {
-
             clearTimeout(autosaveTimer);
-
             autosaveTimer = setTimeout(async () => {
-
                 if (state.isDirty && state.selectedProject) {
-
                     const currentTabEl = document.querySelector('.toggle-option.active');
-
                     let currentTab = currentTabEl ? currentTabEl.id.replace('tab-btn-', '').toUpperCase() : 'EST';
-
                     // Prevent finalization on auto-save
-
                     if (currentTab === 'ACT') currentTab = 'ACT_DRAFT';
-
                     await saveProjectData(currentTab, "Autosaved successfully! 💾");
-
                 }
-
             }, 5000);
-
         }
-
-
 
         // Custom helpers for dynamic Advance/Balance tracking
-
         function getProjectTotal(p) {
-
             if (Number(p?.total_value) > 0) return Number(p.total_value);
-
             
-
             // Fallback to calculated estimate if total_value hasn't been formally saved yet
-
             let sub = 0, misc = 0, cut = 0;
-
             if (p?.expenses) {
-
                 p.expenses.forEach(e => {
-
                     const estAmt = Number(e.amount) || 0;
-
                     if (e.category_name === 'Miscellaneous') misc = estAmt;
-
                     else if (e.category_name === 'Company Cut') cut = estAmt;
-
                     else sub += estAmt;
-
                 });
-
             }
-
             return sub + misc + cut;
-
         }
-
-
 
         function getProjectAdvance(p) {
-
             const total = getProjectTotal(p);
-
             const advPay = p?.payments?.find(pay => pay.type === 'Advance');
-
             if (advPay && advPay.expected_amount > 0) return advPay.expected_amount;
-
             return total * 0.60;
-
         }
-
-
 
         function getProjectBalance(p) {
-
             const total = getProjectTotal(p);
-
             const balPay = p?.payments?.find(pay => pay.type === 'Balance');
-
             if (balPay && balPay.expected_amount > 0) return balPay.expected_amount;
-
             return total * 0.40;
-
         }
-
-
 
         function calculateProjectReceived(p) {
-
             let received = 0;
-
             if (p.payments) {
-
                 p.payments.forEach(pay => {
-
                     if (pay.status === 'Received') {
-
                         let amt = Number(pay.expected_amount) || 0;
-
                         if (amt === 0 && pay.type === 'Advance') amt = getProjectAdvance(p);
-
                         if (amt === 0 && pay.type === 'Balance') amt = getProjectBalance(p);
-
                         received += amt;
-
                     }
-
                 });
-
             }
-
             return received;
-
         }
-
-
 
         Chart.defaults.color = '#94a3b8';
-
         Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
 
-
-
         // ============================================================
-
         // CUSTOM MODALS (Replaces browser prompt/confirm)
-
         // ============================================================
-
         function customPrompt(message, defaultValue = "") {
-
             return new Promise((resolve) => {
-
                 document.getElementById('modal-prompt-msg').innerText = message;
-
                 const input = document.getElementById('modal-prompt-input');
-
                 input.value = defaultValue;
-
                 openModal('modal-prompt');
-
                 
-
                 document.getElementById('btn-prompt-ok').onclick = () => {
-
                     closeModal('modal-prompt');
-
                     resolve(input.value);
-
                 };
-
                 document.getElementById('btn-prompt-cancel').onclick = () => {
-
                     closeModal('modal-prompt');
-
                     resolve(null);
-
                 };
-
             });
-
         }
-
-
 
         function customConfirm(message) {
-
             return new Promise((resolve) => {
-
                 document.getElementById('modal-confirm-msg').innerText = message;
-
                 openModal('modal-confirm');
-
                 
-
                 document.getElementById('btn-confirm-ok').onclick = () => {
-
                     closeModal('modal-confirm');
-
                     resolve(true);
-
                 };
-
                 document.getElementById('btn-confirm-cancel').onclick = () => {
-
                     closeModal('modal-confirm');
-
                     resolve(false);
-
                 };
-
             });
-
         }
 
-
-
         // ============================================================
-
         // INITIALIZATION & REFRESH LOGIC
-
         // ============================================================
-
         window.onload = async () => {
-
             const globalMf = document.getElementById('global-month-filter');
-
             const currentMonthName = monthsList[new Date().getMonth()];
 
-
-
             monthsList.forEach(m => {
-
                 const optGlobal = document.createElement('option');
-
                 optGlobal.value = m; optGlobal.innerText = m;
-
                 if (m === currentMonthName) optGlobal.selected = true; // Default to current month
-
                 globalMf.appendChild(optGlobal);
-
             });
-
-
 
             await refreshData();
-
         };
 
-
-
         async function refreshData() {
-
             const btn = document.getElementById('global-refresh-btn');
-
             if (btn) btn.classList.add('spinning');
-
             
-
             const dot = document.getElementById('conn-dot');
-
             const text = document.getElementById('conn-text');
 
-
-
             try {
-
                 // ALWAYS save the current project state before refreshing, specifically ensuring Draft mode for Actuals
-
                 if (state.selectedProject) {
-
                     const currentTabEl = document.querySelector('.toggle-option.active');
-
                     let currentTab = currentTabEl ? currentTabEl.id.replace('tab-btn-', '').toUpperCase() : 'EST';
-
                     if (currentTab === 'ACT') currentTab = 'ACT_DRAFT';
-
                     await saveProjectData(currentTab, "Saving Draft & Syncing... 💾");
-
                 }
-
-
 
                 const { data: clients, error: errC } = await supabaseClient.from('clients').select('*');
-
                 const { data: projects, error: errP } = await supabaseClient.from('projects').select('*, expenses(id, category_name, amount, actual_amount, description), payments(*)');
 
-
-
                 if (errC) {
-
                     console.error("Supabase Clients Fetch Error:", errC);
-
                     throw new Error(`Clients DB Error: ${errC.message}`);
-
                 }
-
                 if (errP) {
-
                     console.error("Supabase Projects Fetch Error:", errP);
-
                     throw new Error(`Projects DB Error: ${errP.message}`);
-
                 }
-
-
 
                 state.dbClients = clients || [];
-
                 state.dbProjects = projects || [];
-
                 
-
                 if (dot) { dot.classList.remove('offline'); dot.classList.add('online'); }
-
                 if (text) text.innerText = "ONLINE";
 
-
-
                 const activeViewEl = document.querySelector('.view.active');
-
                 if (activeViewEl) {
-
                     const activeView = activeViewEl.id.replace('view-', '');
-
                     
-
                     if (activeView === 'details' && state.selectedProject) {
-
                         const updatedProj = state.dbProjects.find(p => p.id === state.selectedProject.id);
-
                         if (updatedProj) {
-
                             const currentTabEl = document.querySelector('.toggle-option.active');
-
                             const currentTab = currentTabEl ? currentTabEl.id.replace('tab-btn-', '').toUpperCase() : 'EST';
-
                             openProjectDetails(updatedProj, currentTab);
-
                         } else {
-
                             router('clients');
-
                         }
-
                     } else {
-
                         router(activeView);
-
                     }
-
                 }
-
                 
-
                 showToast("Data Refreshed! ✨");
-
             } catch (error) {
-
                 console.error("Detailed Fetch Error:", error);
-
                 if (dot) { dot.classList.remove('online'); dot.classList.add('offline'); }
-
                 if (text) text.innerText = "OFFLINE";
-
                 showToast(error.message || "Failed to fetch data");
-
             } finally {
-
                 if (btn) btn.classList.remove('spinning');
-
             }
-
         }
-
-
 
         function router(viewId) {
-
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-
             document.getElementById('view-' + viewId).classList.add('active');
-
             
-
             document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
-
             
-
             const navBtn = document.getElementById('nav-' + viewId);
-
             if (navBtn) navBtn.classList.add('active');
-
             else if (viewId === 'clients' || viewId === 'projects' || viewId === 'details') document.getElementById('nav-months').classList.add('active');
-
             
-
             if(viewId === 'dashboard') { updateGlobalDashboard(); }
-
             if(viewId === 'months') { renderMonthsList(); }
-
             if(viewId === 'clients') { renderClients(); }
-
             if(viewId === 'projects') { 
-
                 if (state.selectedClient) {
-
                     const filteredProjects = state.dbProjects.filter(p => {
-
                         const yearMatch = inSelectedYear(p.date);
-
                         const monthMatch = state.selectedMonth === 'All' ? true : p.month_name === state.selectedMonth;
-
                         return yearMatch && monthMatch;
-
                     });
-
                     renderProjects(filteredProjects);
-
                 }
-
             }
-
             if(viewId === 'analytics') { updateGlobalDashboard(); }
-
             if(viewId === 'payments') { renderPayments(); }
-
             if(viewId === 'calendar') { renderCalendarView(); }
-
         }
-
-
 
         function handleYearChange() {
-
             state.selectedYear = document.getElementById('global-year-filter').value;
-
             updateGlobalDashboard();
-
             if(document.getElementById('view-months').classList.contains('active')) renderMonthsList();
-
             if(document.getElementById('view-clients').classList.contains('active')) renderClients();
-
             if(document.getElementById('view-payments').classList.contains('active')) renderPayments();
-
             if(document.getElementById('view-calendar').classList.contains('active')) renderCalendarView();
-
         }
-
-
 
         function inSelectedYear(dateString) {
-
             if (state.selectedYear === 'All Time') return true;
-
             if (!dateString) return true; 
-
             return dateString.startsWith(state.selectedYear);
-
         }
 
-
-
         // ============================================================
-
         // VIEW 1: DASHBOARD & ANALYTICS
-
         // ============================================================
-
         function updateGlobalDashboard() {
-
             let totalBookedRev = 0;
-
             let totalReceived = 0;
-
             let currentPending = 0;
-
             let previousPending = 0;
-
             let totalSpent = 0; 
-
             let totalNetProfit = 0; 
-
             
-
             const dashMonth = document.getElementById('global-month-filter').value;
-
             const dashMonthIdx = monthsList.indexOf(dashMonth);
 
-
-
             let monthlyData = { rev: {}, cogs: {}, booked: {}, profit: {} }; 
-
             monthsList.forEach(m => { monthlyData.rev[m] = 0; monthlyData.cogs[m] = 0; monthlyData.booked[m] = 0; monthlyData.profit[m] = 0; });
-
             
-
             let categorySpendEst = {};
-
             let categorySpendAct = {};
 
-
-
             state.dbProjects.forEach(p => {
-
                 if (!inSelectedYear(p.date)) return; 
-
                 
-
                 const status = p.status || 'Confirmed';
-
                 const isConfirmed = (status === 'Confirmed' || status === 'Completed');
 
-
-
                 const projVal = getProjectTotal(p);
-
                 let projSpent = 0;
-
                 let projReceived = calculateProjectReceived(p);
-
                 
-
                 const projPending = projVal - projReceived;
 
-
-
                 let projBaseGrand = 0;
-
                 let sub = 0, misc = 0, cut = 0;
 
-
-
                 if (p.expenses) {
-
                     p.expenses.forEach(e => {
-
                         const estAmt = Number(e.amount) || 0;
-
                         if (e.category_name === 'Miscellaneous') misc = estAmt;
-
                         else if (e.category_name === 'Company Cut') cut = estAmt;
-
                         else sub += estAmt;
 
-
-
                         if (e.category_name === 'Company Cut') return;
-
                         projSpent += (Number(e.actual_amount) || 0);
-
                     });
-
                     projBaseGrand = sub + misc + cut;
-
                 }
-
                 if (projBaseGrand === 0) projBaseGrand = projVal;
 
-
-
                 if (isConfirmed) {
-
                     if(p.month_name && monthlyData.rev[p.month_name] !== undefined) {
-
                         monthlyData.rev[p.month_name] += projReceived; 
-
                         monthlyData.cogs[p.month_name] += projSpent;
-
                         monthlyData.booked[p.month_name] += projVal;
-
                         
-
                         if (status === 'Completed') {
-
-                            monthlyData.profit[p.month_name] += (projBaseGrand - projSpent);
-
+                            monthlyData.profit[p.month_name] += (projVal - projSpent);
                         }
-
                     }
-
-
 
                     if (dashMonth === 'All' || p.month_name === dashMonth) {
-
                         totalBookedRev += projVal;
-
                         totalReceived += projReceived;
-
                         currentPending += projPending;
-
                         totalSpent += projSpent; 
 
-
-
                         if (status === 'Completed') {
-
-                            totalNetProfit += (projBaseGrand - projSpent);
-
+                            totalNetProfit += (projVal - projSpent);
                         }
-
-
 
                         if (p.expenses) {
-
                             p.expenses.forEach(e => {
-
                                 const actAmt = Number(e.actual_amount) || 0;
-
                                 const estAmt = Number(e.amount) || 0;
-
                                 
-
                                 if(actAmt > 0) {
-
                                     if(!categorySpendAct[e.category_name]) categorySpendAct[e.category_name] = 0;
-
                                     categorySpendAct[e.category_name] += actAmt;
-
                                 }
-
                                 if(estAmt > 0) {
-
                                     if(!categorySpendEst[e.category_name]) categorySpendEst[e.category_name] = 0;
-
                                     categorySpendEst[e.category_name] += estAmt;
-
                                 }
-
                             });
-
                         }
-
                     } else if (dashMonth !== 'All') {
-
                         const pMonthIdx = monthsList.indexOf(p.month_name);
-
                         if (pMonthIdx !== -1 && pMonthIdx < dashMonthIdx && projPending > 0) {
-
                             previousPending += projPending;
-
                         }
-
                     }
-
                 }
-
             });
-
-
 
             const totalPendingDisplay = currentPending + previousPending;
 
-
-
             state.pieDataEst = categorySpendEst;
-
             state.pieDataAct = categorySpendAct;
 
-
-
             document.getElementById('dash-rev-booked').innerText = formatINR(totalBookedRev);
-
             document.getElementById('dash-rev-received').innerText = formatINR(totalReceived);
-
             document.getElementById('dash-rev-pending').innerText = formatINR(totalPendingDisplay > 0 ? totalPendingDisplay : 0);
-
             
-
             document.getElementById('dash-net-profit').innerText = formatINR(totalNetProfit);
-
             document.getElementById('dash-total-spent').innerText = formatINR(totalSpent);
 
-
-
             const prevTextEl = document.getElementById('dash-rev-previous');
-
             if (previousPending > 0 && dashMonth !== 'All') {
-
                 prevTextEl.innerText = `Includes ${formatINR(previousPending)} from past`;
-
                 prevTextEl.style.display = 'block';
-
             } else {
-
                 prevTextEl.style.display = 'none';
-
             }
 
-
-
             renderExpensePieChart();
-
             renderChart(monthlyData);
-
             renderProjectChart(monthlyData);
-
             renderProfitChart(monthlyData);
-
         }
-
-
 
         function switchPieView(view) {
-
             state.currentPieView = view;
-
             
-
             const btnEst = document.getElementById('pie-btn-est');
-
             const btnAct = document.getElementById('pie-btn-act');
-
             
-
             if (view === 'EST') {
-
                 btnEst.style.background = 'var(--primary)';
-
                 btnEst.style.color = 'white';
-
                 btnAct.style.background = 'transparent';
-
                 btnAct.style.color = 'var(--text-muted)';
-
             } else {
-
                 btnAct.style.background = 'var(--primary)';
-
                 btnAct.style.color = 'white';
-
                 btnEst.style.background = 'transparent';
-
                 btnEst.style.color = 'var(--text-muted)';
-
             }
-
             
-
             renderExpensePieChart();
-
         }
 
-
-
         function renderExpensePieChart() {
-
             const spendObj = state.currentPieView === 'EST' ? state.pieDataEst : state.pieDataAct;
-
             const ctx = document.getElementById('expensePieChart').getContext('2d');
-
             
-
             const rawLabels = Object.keys(spendObj);
-
             const data = Object.values(spendObj);
-
             const labels = rawLabels.map((label, index) => `${label}: ${formatINR(data[index])}`);
-
-
 
             if (expensePieChartInstance) expensePieChartInstance.destroy();
 
-
-
             if (data.length === 0 || data.every(v => v === 0)) {
-
                 const emptyText = state.currentPieView === 'EST' ? 'No Estimates Logged' : 'No Actual Spend Logged';
-
                 expensePieChartInstance = new Chart(ctx, {
-
                     type: 'doughnut',
-
                     data: { labels: [emptyText], datasets: [{ data: [1], backgroundColor: ['rgba(255,255,255,0.05)'], borderWidth: 0 }] },
-
                     options: { 
-
                         plugins: { 
-
                             tooltip: { enabled: false }, 
-
                             legend: { display: false },
-
                             title: { display: true, text: emptyText, position: 'bottom', color: '#94a3b8', font: {weight: 'normal', size: 12}, padding: {top: 20} }
-
                         }, 
-
                         cutout: '75%' 
-
                     }
-
                 });
-
                 return;
-
             }
-
-
 
             const colors = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#eab308'];
 
-
-
             expensePieChartInstance = new Chart(ctx, {
-
                 type: 'doughnut',
-
                 data: {
-
                     labels: labels,
-
                     datasets: [{
-
                         data: data,
-
                         backgroundColor: colors,
-
                         borderWidth: 0,
-
                         borderRadius: 4
-
                     }]
-
                 },
-
                 options: {
-
                     responsive: true, maintainAspectRatio: false,
-
                     cutout: '70%',
-
                     plugins: {
-
                         legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8, color: '#94a3b8', font: {size: 10} } },
-
                         tooltip: { callbacks: { label: function(context) { return ' ' + formatINR(context.raw); } } }
-
                     }
-
                 }
-
             });
-
         }
 
-
-
         function renderChart(dataObj) {
-
             const ctx = document.getElementById('dashboardChart').getContext('2d');
-
             const labels = monthsList.map(m => m.substring(0,3));
-
             
-
             const revData = monthsList.map(m => dataObj.rev[m]);
-
             const expData = monthsList.map(m => dataObj.cogs[m]);
-
-
 
             if (dashboardChartInstance) dashboardChartInstance.destroy();
 
-
-
             dashboardChartInstance = new Chart(ctx, {
-
                 type: 'bar',
-
                 data: {
-
                     labels: labels,
-
                     datasets: [
-
                         {
-
                             label: 'Amount Received',
-
                             data: revData,
-
                             backgroundColor: 'rgba(16, 185, 129, 0.8)',
-
                             borderRadius: 4, barPercentage: 0.6,
-
                             order: 1
-
                         },
-
                         {
-
                             label: 'Project Spend',
-
                             data: expData,
-
                             backgroundColor: 'rgba(239, 68, 68, 0.8)',
-
                             borderRadius: 4, barPercentage: 0.6,
-
                             order: 2
-
                         }
-
                     ]
-
                 },
-
                 options: {
-
                     responsive: true, maintainAspectRatio: false,
-
                     scales: {
-
                         y: { 
-
                             beginAtZero: true, 
-
                             grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false },
-
                             ticks: { callback: function(value) { return '₹' + (value/1000) + 'k'; } }
-
                         },
-
                         x: { grid: { display: false, drawBorder: false } }
-
                     },
-
                     plugins: {
-
                         legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8, color: '#94a3b8' } },
-
                         tooltip: { callbacks: { label: function(context) { return context.dataset.label + ': ' + formatINR(context.raw); } } }
-
                     }
-
                 }
-
             });
-
         }
 
-
-
         function renderProjectChart(dataObj) {
-
             const ctx = document.getElementById('projectChart').getContext('2d');
-
             const labels = monthsList.map(m => m.substring(0,3));
-
             const bookedData = monthsList.map(m => dataObj.booked[m]);
-
-
 
             if (projectChartInstance) projectChartInstance.destroy();
 
-
-
             projectChartInstance = new Chart(ctx, {
-
                 type: 'bar',
-
                 data: {
-
                     labels: labels,
-
                     datasets: [{
-
                         label: 'Booked Pipeline',
-
                         data: bookedData,
-
                         backgroundColor: 'rgba(99, 102, 241, 0.8)',
-
                         borderRadius: 4, 
-
                         barPercentage: 0.6
-
                     }]
-
                 },
-
                 options: {
-
                     responsive: true, maintainAspectRatio: false,
-
                     scales: {
-
                         y: { 
-
                             beginAtZero: true, 
-
                             grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false },
-
                             ticks: { callback: function(value) { return '₹' + (value/1000) + 'k'; } }
-
                         },
-
                         x: { grid: { display: false, drawBorder: false } }
-
                     },
-
                     plugins: {
-
                         legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8, color: '#94a3b8' } },
-
                         tooltip: { callbacks: { label: function(context) { return 'Booked: ' + formatINR(context.raw); } } }
-
                     }
-
                 }
-
             });
-
         }
 
-
-
         function renderProfitChart(dataObj) {
-
             const ctx = document.getElementById('profitChart').getContext('2d');
-
             const labels = monthsList.map(m => m.substring(0,3));
-
             const profitData = monthsList.map(m => dataObj.profit[m]);
-
-
 
             if (profitChartInstance) profitChartInstance.destroy();
 
-
-
             profitChartInstance = new Chart(ctx, {
-
                 type: 'line',
-
                 data: {
-
                     labels: labels,
-
                     datasets: [{
-
                         label: 'Net Profit',
-
                         data: profitData,
-
                         borderColor: '#10b981',
-
                         backgroundColor: 'rgba(16, 185, 129, 0.1)',
-
                         borderWidth: 2,
-
                         fill: true,
-
                         tension: 0.4,
-
                         pointBackgroundColor: '#10b981'
-
                     }]
-
                 },
-
                 options: {
-
                     responsive: true, maintainAspectRatio: false,
-
                     scales: {
-
                         y: { 
-
                             grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false },
-
                             ticks: { callback: function(value) { return '₹' + (value/1000) + 'k'; } }
-
                         },
-
                         x: { grid: { display: false, drawBorder: false } }
-
                     },
-
                     plugins: {
-
                         legend: { position: 'top', labels: { usePointStyle: true, boxWidth: 8, color: '#94a3b8' } },
-
                         tooltip: { callbacks: { label: function(context) { return 'Profit: ' + formatINR(context.raw); } } }
-
                     }
-
                 }
-
             });
-
         }
 
-
-
         // ============================================================
-
         // VIEW 2: MONTHS TIMELINE
-
         // ============================================================
-
         function renderMonthsList() {
-
             const list = document.getElementById('months-list');
-
             list.innerHTML = '';
-
             
-
             monthsList.forEach(m => {
-
                 const mProjects = state.dbProjects.filter(p => p.month_name === m && inSelectedYear(p.date));
-
                 let mRev = 0;
-
                 mProjects.forEach(p => { 
-
                     if(p.status === 'Confirmed' || p.status === 'Completed') {
-
                         mRev += (Number(p.total_value) || 0); 
-
                     }
-
                 });
 
-
-
                 const div = document.createElement('div');
-
                 div.className = 'card';
-
                 div.innerHTML = `
-
                     <span style="font-weight: 600; font-size: 1.1rem;">${m}</span>
-
                     <div style="display: flex; align-items: center; gap: 15px;">
-
                         <span style="font-size: 0.8rem; color: var(--text-muted);">${mProjects.length} Proj</span>
-
                         <span style="color: var(--text-main); font-weight: 700;">${formatINR(mRev)}</span>
-
                         <span style="color: var(--primary); font-size: 1.2rem;">›</span>
-
                     </div>`;
-
                 div.onclick = () => { 
-
                     state.selectedMonth = m; 
-
                     router('clients'); 
-
                 };
-
                 list.appendChild(div);
-
             });
-
         }
 
-
-
         // ============================================================
-
         // VIEW 3 & 4: CLIENTS & PROJECTS
-
         // ============================================================
-
         function renderClients() {
-
             document.getElementById('client-header').innerText = `${state.selectedMonth} Clients`;
-
             
-
             const list = document.getElementById('clients-list');
-
             list.innerHTML = '';
 
-
-
             const filteredProjects = state.dbProjects.filter(p => {
-
                 const yearMatch = inSelectedYear(p.date);
-
                 const monthMatch = state.selectedMonth === 'All' ? true : p.month_name === state.selectedMonth;
-
                 return yearMatch && monthMatch;
-
             });
-
-
 
             const activeClients = state.dbClients.filter(c => filteredProjects.some(p => p.client_id === c.id));
 
-
-
             if (activeClients.length === 0) { list.innerHTML = `<div style="text-align:center; color: var(--text-muted); padding: 20px;">No active clients for this period.</div>`; return; }
 
-
-
             activeClients.forEach(c => {
-
                 const clientProjects = filteredProjects.filter(p => p.client_id === c.id);
-
                 const count = clientProjects.length;
-
                 let clientRev = 0;
-
                 let clientReceived = 0;
-
                 let clientSpent = 0;
-
-                let clientProfit = 0;
-
+                let clientNetRev = 0;
                 let completedCount = 0;
-
                 
-
                 clientProjects.forEach(cp => {
-
                     if(cp.status === 'Confirmed' || cp.status === 'Completed') {
-
                         const pVal = getProjectTotal(cp);
-
                         clientRev += pVal;
-
                         
-
                         let projBaseGrand = 0;
-
                         let sub = 0, misc = 0, cut = 0;
-
                         let projSpent = 0;
-
-
 
                         clientReceived += calculateProjectReceived(cp);
 
-
-
                         if (cp.expenses) {
-
                             cp.expenses.forEach(e => {
-
                                 const estAmt = Number(e.amount) || 0;
-
                                 if (e.category_name === 'Miscellaneous') misc = estAmt;
-
                                 else if (e.category_name === 'Company Cut') cut = estAmt;
-
                                 else sub += estAmt;
 
-
-
                                 if (e.category_name === 'Company Cut') return;
-
                                 projSpent += (Number(e.actual_amount) || 0);
-
                             });
-
                             projBaseGrand = sub + misc + cut;
-
                         }
-
                         if (projBaseGrand === 0) projBaseGrand = pVal;
-
                         
-
                         clientSpent += projSpent;
 
-
-
                         if (cp.status === 'Completed') {
-
-                            clientProfit += (projBaseGrand - projSpent);
-
+                            clientNetRev += (pVal - projSpent);
                             completedCount++;
-
                         }
-
                     }
-
                 });
-
-
 
                 const clientPending = clientRev - clientReceived;
 
-
-
-                let profitHtml = `<span style="color: var(--text-muted); font-weight: 600;">Profit: --</span>`;
-
+                let netRevHtml = `<span style="color: var(--text-muted); font-weight: 600;">Net Rev: --</span>`;
                 if (completedCount > 0) {
-
-                    const profitColor = clientProfit >= 0 ? '#86efac' : '#fca5a5';
-
-                    const profitSign = clientProfit >= 0 ? '+' : '-';
-
-                    const profitLabel = clientProfit >= 0 ? 'Profit' : 'Loss';
-
-                    profitHtml = `<span style="color: ${profitColor}; font-weight: 800;">${profitLabel}: ${profitSign}${formatINR(Math.abs(clientProfit))}</span>`;
-
+                    netRevHtml = `<span style="color: var(--info); font-weight: 800;">Net Rev: ${formatINR(clientNetRev)}</span>`;
                 }
 
-
-
                 const div = document.createElement('div');
-
                 div.className = 'card';
-
                 div.innerHTML = `
-
                     <div class="client-clickable" style="flex: 1;">
-
                         <div style="font-weight:700; font-size:1.1rem; color:var(--text-main);">${c.name}</div>
-
                         <div style="font-size:0.85rem; color:var(--text-muted); margin-top:4px; display:flex; align-items:center; gap: 6px;">
-
                             <span>${count} Projects</span>
-
                             <span style="color:var(--border);">|</span>
-
                             <span>Total Value: <span style="font-weight:800; color:var(--text-main); font-size: 0.95rem;">${formatINR(clientRev)}</span></span>
-
                         </div>
-
                         <div style="font-size:0.75rem; margin-top:10px; display: flex; gap: 12px; flex-wrap: wrap;">
-
                             <span style="color: var(--danger); font-weight: 600;">Spend: ${formatINR(clientSpent)}</span>
-
-                            ${profitHtml}
-
+                            ${netRevHtml}
                             <span style="color: var(--success); font-weight: 600;">Rec: ${formatINR(clientReceived)}</span>
-
                             <span style="color: var(--warning); font-weight: 600;">Bal: ${formatINR(clientPending)}</span>
-
                         </div>
-
                     </div>
-
                     <div style="display:flex; align-items:center; gap:8px;">
-
                         <button class="btn-del" style="color: var(--text-muted); font-size: 1rem;" onclick="event.stopPropagation(); renameClient('${c.id}', '${c.name.replace(/'/g, "\\'")}')">✏️</button>
-
                         <button class="btn-del" style="font-size: 1rem;" onclick="event.stopPropagation(); handleDeleteClient('${c.id}')">🗑️</button>
-
                         <span style="color:var(--primary); font-size:1.2rem; margin-left: 5px;">›</span>
-
                     </div>`;
-
                 
-
                 div.querySelector('.client-clickable').onclick = () => {
-
                     state.selectedClient = c;
-
                     renderProjects(filteredProjects);
-
                     router('projects');
-
                 };
-
                 
-
                 list.appendChild(div);
-
             });
-
         }
-
-
 
         async function renameClient(id, oldName) {
-
             const newName = await customPrompt("Rename client:", oldName);
-
             if (!newName || newName.trim() === "" || newName === oldName) return;
-
             
-
             const idx = state.dbClients.findIndex(c => c.id === id);
-
             if (idx > -1) state.dbClients[idx].name = newName;
-
             
-
             renderClients();
-
             showToast("Client renamed");
-
             
-
             await supabaseClient.from('clients').update({ name: newName }).eq('id', id);
-
         }
 
-
-
         function renderProjects(filteredProjectsList) {
-
             document.getElementById('project-header').innerText = state.selectedClient.name;
-
             const list = document.getElementById('projects-list');
-
             list.innerHTML = '';
-
-
 
             const projects = filteredProjectsList.filter(p => p.client_id === state.selectedClient.id);
 
-
-
             projects.forEach(p => {
-
                 const totalVal = getProjectTotal(p);
-
                 const status = p.status || 'Confirmed';
-
                 
-
                 let projReceived = calculateProjectReceived(p);
-
                 const projPending = totalVal - projReceived;
 
-
-
                 let projSpent = 0;
-
                 let projBaseGrand = 0;
-
                 let sub = 0, misc = 0, cut = 0;
 
-
-
                 if (p.expenses) {
-
                     p.expenses.forEach(e => {
-
                         const estAmt = Number(e.amount) || 0;
-
                         if (e.category_name === 'Miscellaneous') misc = estAmt;
-
                         else if (e.category_name === 'Company Cut') cut = estAmt;
-
                         else sub += estAmt;
 
-
-
                         if (e.category_name !== 'Company Cut') {
-
                             projSpent += (Number(e.actual_amount) || 0);
-
                         }
-
                     });
-
                     projBaseGrand = sub + misc + cut;
-
                 }
-
                 if (projBaseGrand === 0) projBaseGrand = totalVal;
 
-
-
-                let profitDisplayHtml = '';
-
+                let netRevDisplayHtml = '';
                 if (status === 'Completed') {
-
-                    const projProfit = projBaseGrand - projSpent;
-
-                    const profitColor = projProfit >= 0 ? '#86efac' : '#fca5a5';
-
-                    const profitSign = projProfit >= 0 ? '+' : '-';
-
-                    const profitLabel = projProfit >= 0 ? 'Profit' : 'Loss';
-
-                    const formattedProfit = formatINR(Math.abs(projProfit));
-
-                    profitDisplayHtml = `<div style="font-size: 0.75rem; color: ${profitColor}; font-weight: 700; margin-top: 4px;">${profitLabel}: ${profitSign}${formattedProfit}</div>`;
-
+                    const netRev = totalVal - projSpent;
+                    netRevDisplayHtml = `<div style="font-size: 0.75rem; color: var(--info); font-weight: 700; margin-top: 4px;">Net Rev: ${formatINR(netRev)}</div>`;
                 }
-
-
 
                 let revStatusHtml = '';
-
                 if (status === 'Confirmed' || status === 'Completed') {
-
                     if (projPending <= 0 && totalVal > 0) {
-
                         revStatusHtml = `<div style="font-size: 0.65rem; color: var(--success); font-weight: 800; margin-top: 6px; background: rgba(16, 185, 129, 0.1); padding: 4px 6px; border-radius: 6px; display: inline-block;">✅ FULLY PAID</div>`;
-
                     } else if (projPending > 0) {
-
                         revStatusHtml = `<div style="font-size: 0.65rem; color: var(--warning); font-weight: 800; margin-top: 6px; background: rgba(245, 158, 11, 0.1); padding: 4px 6px; border-radius: 6px; display: inline-block;">⏳ PEND: ${formatINR(projPending)}</div>`;
-
                     }
-
                 } else if (status === 'Estimate') {
-
                     revStatusHtml = `<div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 600; margin-top: 6px;">📝 ESTIMATE ONLY</div>`;
-
                 }
 
-
-
                 let valueLabel = 'VALUE';
-
                 if (status === 'Estimate') valueLabel = 'ESTIMATED AMOUNT';
-
                 else if (status === 'Confirmed') valueLabel = 'CONFIRMED AMOUNT';
-
                 else if (status === 'Completed') valueLabel = 'COMPLETED AMOUNT';
 
-
-
                 const div = document.createElement('div');
-
                 div.className = 'card';
-
                 div.innerHTML = `
-
                     <div style="flex: 1;">
-
                         <div style="font-weight:700; font-size: 1.05rem; margin-bottom: 6px;">${p.name}</div>
-
                         <select onclick="event.stopPropagation()" onchange="updateStatusFromList('${p.id}', this.value)" style="padding: 4px 8px; border-radius: 8px; font-size: 0.65rem; background: rgba(255,255,255,0.05); color: var(--text-main); border: 1px solid rgba(255,255,255,0.1); outline: none; cursor: pointer; font-weight: 600;">
-
                             <option value="Estimate" ${status === 'Estimate' ? 'selected' : ''}>🟡 Estimate</option>
-
                             <option value="Confirmed" ${status === 'Confirmed' ? 'selected' : ''}>🟢 Confirmed</option>
-
                             <option value="Completed" ${status === 'Completed' ? 'selected' : ''}>🔵 Completed</option>
-
                             <option value="Dropped" ${status === 'Dropped' ? 'selected' : ''}>🔴 Dropped</option>
-
                         </select>
-
                     </div>
-
                     <div style="text-align:right;">
-
                         <div style="font-size: 0.7rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">${valueLabel}</div>
-
                         <div style="font-weight:800; color:var(--text-main); font-size: 1.1rem;">${formatINR(totalVal)}</div>
-
-                        ${profitDisplayHtml}
-
+                        ${netRevDisplayHtml}
                         ${revStatusHtml}
-
                     </div>`;
-
                 div.onclick = () => { openProjectDetails(p, 'REV'); };
-
                 list.appendChild(div);
-
             });
-
         }
-
-
 
         async function updateStatusFromList(projectId, newStatus) {
-
             const idx = state.dbProjects.findIndex(p => p.id === projectId);
-
             if (idx > -1) state.dbProjects[idx].status = newStatus;
-
             
-
             showToast("Marked as " + newStatus);
-
             
-
             const filteredProjects = state.dbProjects.filter(p => inSelectedYear(p.date));
-
             renderProjects(filteredProjects);
-
             updateGlobalDashboard(); 
 
-
-
             await supabaseClient.from('projects').update({ status: newStatus }).eq('id', projectId);
-
         }
 
-
-
         // ============================================================
-
         // VIEW 5: PROJECT DETAILS (3 TABS)
-
         // ============================================================
-
         function switchTab(tab) {
-
             ['EST', 'REV', 'ACT'].forEach(t => {
-
                 document.getElementById(`tab-btn-${t.toLowerCase()}`).classList.remove('active');
-
                 document.getElementById(`tab-content-${t.toLowerCase()}`).style.display = 'none';
-
             });
-
             document.getElementById(`tab-btn-${tab.toLowerCase()}`).classList.add('active');
-
             document.getElementById(`tab-content-${tab.toLowerCase()}`).style.display = 'block';
-
         }
-
-
 
         function openProjectDetails(p, targetTab = 'REV') {
-
             state.selectedProject = p;
-
             state.isDirty = false;
-
             
-
             document.getElementById('detail-project-name').innerText = p.name;
-
             document.getElementById('detail-client-name').innerText = state.dbClients.find(c => c.id === p.client_id)?.name || 'Unknown Client';
-
             document.getElementById('project-status').value = p.status || 'Confirmed';
 
-
-
             state.currentPayments = p.payments || [];
-
             state.expensesMap = {};
-
             state.customRows = [];
-
             state.manualMisc = false;
-
             state.manualCut = false;
 
-
-
             baseCategories.forEach(c => state.expensesMap[c] = { id: null, estimate: 0, actual: null, subItems: [] });
-
             
-
             if (p.expenses) {
-
                 p.expenses.forEach(e => {
-
                     const c = e.category_name;
-
                     let parsedDetails = [];
-
                     if (e.description) {
-
                         try { parsedDetails = typeof e.description === 'string' ? JSON.parse(e.description) : e.description; } 
-
                         catch(err) {}
-
                     }
-
-
 
                     if (!state.expensesMap[c]) {
-
                         state.expensesMap[c] = { id: e.id, estimate: 0, actual: null, subItems: parsedDetails };
-
                         if (!['Miscellaneous', 'Company Cut'].includes(c) && !baseCategories.includes(c)) {
-
                             state.customRows.push(c);
-
                         }
-
                     } else {
-
                         state.expensesMap[c].id = e.id;
-
                         state.expensesMap[c].subItems = parsedDetails;
-
                     }
-
                     state.expensesMap[c].estimate = Number(e.amount) || 0;
-
                     state.expensesMap[c].actual = e.actual_amount !== null && e.actual_amount !== undefined ? Number(e.actual_amount) : null;
 
-
-
                     if (c === 'Miscellaneous' && state.expensesMap[c].estimate > 0) state.manualMisc = true;
-
                     if (c === 'Company Cut' && state.expensesMap[c].estimate > 0) state.manualCut = true;
-
                 });
-
             }
 
-
-
             setCategory(p.category || 'PROMOTIONAL', false);
-
             document.getElementById('inp-date').value = p.date || '';
-
             document.getElementById('inp-days').value = p.days || 1;
-
             document.getElementById('inp-actors').value = p.actors || 0;
-
             document.getElementById('inp-videos').value = p.videos || 1;
-
             document.getElementById('inp-photos').value = p.photos || 0;
-
             renderEstimateExpenses();
 
-
-
             document.getElementById('inp-total-val').value = p.total_value || document.getElementById('val-est-grand').innerText.replace(/[₹,]/g, '') || 0;
-
             document.getElementById('inp-pay-date').value = new Date().toISOString().split('T')[0];
-
             calculateSplits();
-
             updatePaymentUI();
-
-
 
             renderActualsExpenses();
 
-
-
             switchTab(targetTab);
-
             router('details');
-
         }
-
-
 
         async function changeProjectStatus(newStatus) {
-
             state.selectedProject.status = newStatus;
-
             const idx = state.dbProjects.findIndex(p => p.id === state.selectedProject.id);
-
             if (idx > -1) state.dbProjects[idx].status = newStatus;
-
             
-
             showToast("Marked as " + newStatus);
-
             updateGlobalDashboard();
-
             await supabaseClient.from('projects').update({ status: newStatus }).eq('id', state.selectedProject.id);
-
         }
-
-
 
         // --- ESTIMATE TAB LOGIC ---
-
         function setCategory(cat, calc = true) {
-
             state.selectedProject.category = cat;
-
             document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
-
             document.getElementById('cat-' + cat)?.classList.add('active');
-
             if(calc) { markDirty(); calculateEstimates(); }
-
         }
 
-
-
         async function addCustomExpenseRow() {
-
             let rawName = await customPrompt("Enter the name for this expense (e.g., Extra Gear):");
-
             if (rawName === null) return; // cancelled
-
             let cleanName = rawName.trim();
-
             
-
             if (!cleanName) {
-
                 let count = state.customRows.length + 1;
-
                 cleanName = "Custom " + count;
-
                 while(state.expensesMap[cleanName]) { count++; cleanName = "Custom " + count; }
-
             }
-
-
 
             if (state.expensesMap[cleanName]) return showToast("Expense name already exists!");
 
-
-
             state.expensesMap[cleanName] = { id: null, estimate: 0, actual: null, subItems: [] };
-
             state.customRows.push(cleanName);
-
             renderEstimateExpenses();
-
             if (document.getElementById('tab-content-act').style.display === 'block') renderActualsExpenses();
-
             calculateEstimates();
-
             markDirty();
-
         }
-
-
 
         function deleteExpense(cat) {
-
             delete state.expensesMap[cat];
-
             state.customRows = state.customRows.filter(r => r !== cat);
-
             renderEstimateExpenses();
-
             renderActualsExpenses();
-
             calculateEstimates();
-
             markDirty();
-
         }
-
-
 
         function renderEstimateExpenses() {
-
             const container = document.getElementById('est-expenses-container');
-
             container.innerHTML = '';
-
             
-
             const allCats = [...baseCategories, ...state.customRows];
-
             allCats.forEach(cat => {
-
                 if (cat === 'Miscellaneous' || cat === 'Company Cut') return;
-
                 const est = state.expensesMap[cat]?.estimate || 0;
-
                 
-
                 const row = document.createElement('div');
-
                 row.className = 'expense-row';
-
                 
-
                 let labelHtml = `<label>${cat}</label>`;
-
                 let delBtn = '<div></div>';
-
                 
-
                 if (state.customRows.includes(cat)) {
-
                     delBtn = `<button class="btn-del" onclick="deleteExpense('${cat}')">×</button>`;
-
                 }
-
-
 
                 row.innerHTML = `
-
                     ${labelHtml}
-
                     <div class="expense-input-wrapper">
-
                         <span>₹</span><input type="number" value="${est}" oninput="updateEstimateMap('${cat}', this.value)">
-
                     </div>
-
                     ${delBtn}
-
                 `;
-
                 container.appendChild(row);
-
             });
-
             calculateEstimates();
-
         }
-
-
 
         function updateEstimateMap(cat, val) {
-
             if(!state.expensesMap[cat]) state.expensesMap[cat] = {id:null, estimate:0, actual:null, subItems:[]};
-
             state.expensesMap[cat].estimate = Number(val) || 0;
-
             calculateEstimates();
-
             if(state.expensesMap[cat].actual === null && (!state.expensesMap[cat].subItems || state.expensesMap[cat].subItems.length === 0)) {
-
                renderActualsExpenses();
-
             }
-
             markDirty();
-
         }
-
-
 
         function overrideSpecial(type, val) {
-
             const key = type === 'Misc' ? 'Miscellaneous' : 'Company Cut';
-
             if (!state.expensesMap[key]) state.expensesMap[key] = {id:null, estimate:0, actual:null, subItems:[]};
-
             
-
             if (val === "") {
-
                 if (type === 'Misc') state.manualMisc = false;
-
                 if (type === 'Cut') state.manualCut = false;
-
             } else {
-
                 state.expensesMap[key].estimate = Number(val) || 0;
-
                 if (type === 'Misc') state.manualMisc = true;
-
                 if (type === 'Cut') state.manualCut = true;
-
             }
-
             calculateEstimates();
-
             renderActualsExpenses(); 
-
             markDirty();
-
         }
 
-
-
         function calculateEstimates() {
-
             let subtotal = 0;
-
             for (let k in state.expensesMap) {
-
                 if (k !== 'Miscellaneous' && k !== 'Company Cut') {
-
                     subtotal += (state.expensesMap[k].estimate || 0);
-
                 }
-
             }
 
-
-
             if (!state.expensesMap['Miscellaneous']) state.expensesMap['Miscellaneous'] = {id:null, estimate:0, actual:null, subItems:[]};
-
             if (!state.expensesMap['Company Cut']) state.expensesMap['Company Cut'] = {id:null, estimate:0, actual:null, subItems:[]};
 
-
-
             if (!state.manualMisc) state.expensesMap['Miscellaneous'].estimate = subtotal * 0.10;
-
             let misc = state.expensesMap['Miscellaneous'].estimate;
 
-
-
             if (!state.manualCut) state.expensesMap['Company Cut'].estimate = (subtotal + misc) * 0.28;
-
             let cut = state.expensesMap['Company Cut'].estimate;
-
-
 
             const grand = subtotal + misc + cut;
 
-
-
             document.getElementById('val-est-sub').innerText = formatINR(subtotal);
-
             const inpMisc = document.getElementById('inp-est-misc');
-
             if (document.activeElement !== inpMisc) inpMisc.value = state.manualMisc ? Math.round(misc) : (Math.round(misc) || "");
-
             const inpCut = document.getElementById('inp-est-cut');
-
             if (document.activeElement !== inpCut) inpCut.value = state.manualCut ? Math.round(cut) : (Math.round(cut) || "");
-
             
-
             document.getElementById('val-est-grand').innerText = formatINR(grand);
-
             document.getElementById('rev-display-est-grand').innerText = formatINR(grand);
 
-
-
             if(!state.selectedProject.total_value) {
-
                 document.getElementById('inp-total-val').value = Math.round(grand);
-
                 calculateSplits();
-
             }
-
-
 
             updateTextPreview(grand);
-
         }
-
-
 
         function getBaseGrandTotal() {
-
             let subtotal = 0;
-
             for (let k in state.expensesMap) {
-
                 if (k !== 'Miscellaneous' && k !== 'Company Cut') {
-
                     subtotal += (state.expensesMap[k].estimate || 0);
-
                 }
-
             }
-
             let misc = state.expensesMap['Miscellaneous']?.estimate || 0;
-
             let cut = state.expensesMap['Company Cut']?.estimate || 0;
-
             return subtotal + misc + cut;
-
         }
-
-
 
         function toggleGST() {
-
             const grandTotal = getBaseGrandTotal();
-
             const currentTotal = Number(document.getElementById('inp-total-val').value) || 0;
-
             
-
             const isGSTApplied = Math.abs(currentTotal - (grandTotal * 1.18)) < 5;
-
             
-
             if (isGSTApplied) {
-
                 document.getElementById('inp-total-val').value = Math.round(grandTotal);
-
                 showToast("GST Excluded");
-
             } else {
-
                 const gstAmount = grandTotal * 0.18;
-
                 document.getElementById('inp-total-val').value = Math.round(grandTotal + gstAmount);
-
                 showToast("18% GST Applied");
-
             }
-
             
-
             calculateSplits();
-
             saveProjectData('REV');
-
         }
-
-
 
         function updateGSTButtonUI() {
-
             const btn = document.getElementById('btn-gst-toggle');
-
             if (!btn) return;
-
             
-
             const grandTotal = getBaseGrandTotal();
-
             const currentTotal = Number(document.getElementById('inp-total-val').value) || 0;
-
             const isGSTApplied = grandTotal > 0 && Math.abs(currentTotal - (grandTotal * 1.18)) < 5;
-
             
-
             if (isGSTApplied) {
-
                 btn.innerHTML = '- Exclude 18% GST';
-
                 btn.style.background = 'rgba(239, 68, 68, 0.15)';
-
                 btn.style.borderColor = 'var(--danger)';
-
                 btn.style.color = 'var(--danger)';
-
             } else {
-
                 btn.innerHTML = '+ Include 18% GST';
-
                 btn.style.background = 'rgba(16, 185, 129, 0.15)';
-
                 btn.style.borderColor = 'var(--success)';
-
                 btn.style.color = 'var(--success)';
-
             }
-
         }
-
-
 
         function markDirty() { 
-
             state.isDirty = true; 
-
             triggerAutosave();
-
         }
-
-
 
         function updateTextPreview(total) {
-
             const p = state.selectedProject;
-
             let t = `Quote from AIGFOX ORIGINALS\n\nProject: ${p.name}\nType: ${p.category}\nShoot Days: ${document.getElementById('inp-days').value}\n\nBreakdown:\n`;
-
             for(let k in state.expensesMap) {
-
                 if(state.expensesMap[k].estimate > 0) t += `* ${k}: ${formatINR(state.expensesMap[k].estimate)}\n`;
-
             }
-
             t += `\nTotal Quote: ${formatINR(total)}`;
-
             document.getElementById('client-preview-text').value = t;
-
         }
-
-
 
         // --- REVENUE TAB LOGIC ---
-
         function calculateSplits() {
-
             const total = Number(document.getElementById('inp-total-val').value) || 0;
-
             const p = state.selectedProject;
-
             
-
             let advAmt = getProjectAdvance(p);
-
             let balAmt = getProjectBalance(p);
-
             let oldTotal = advAmt + balAmt;
-
             
-
             let advPct = oldTotal > 0 ? (advAmt / oldTotal) : 0.60;
-
             
-
             const newAdv = Math.round(total * advPct);
-
             const newBal = total - newAdv;
-
             
-
             document.getElementById('inp-advance-val').value = newAdv;
-
             document.getElementById('inp-balance-val').value = newBal;
-
             
-
             updateSplitLabels(total, newAdv, newBal);
 
-
-
             updatePaymentUI(); 
-
             updateGSTButtonUI();
-
             markDirty();
-
         }
-
-
 
         function handleAdvanceEdit() {
-
             const total = Number(document.getElementById('inp-total-val').value) || 0;
-
             let adv = Number(document.getElementById('inp-advance-val').value) || 0;
-
             if (adv > total) { adv = total; document.getElementById('inp-advance-val').value = adv; }
-
             const bal = total - adv;
-
             document.getElementById('inp-balance-val').value = bal;
-
             updateSplitLabels(total, adv, bal);
-
             updatePaymentUI();
-
             markDirty();
-
         }
-
-
 
         function handleBalanceEdit() {
-
             const total = Number(document.getElementById('inp-total-val').value) || 0;
-
             let bal = Number(document.getElementById('inp-balance-val').value) || 0;
-
             if (bal > total) { bal = total; document.getElementById('inp-balance-val').value = bal; }
-
             const adv = total - bal;
-
             document.getElementById('inp-advance-val').value = adv;
-
             updateSplitLabels(total, adv, bal);
-
             updatePaymentUI();
-
             markDirty();
-
         }
-
-
 
         function updateSplitLabels(total, adv, bal) {
-
             const advPct = total > 0 ? Math.round((adv / total) * 100) : 60;
-
             const balPct = total > 0 ? Math.round((bal / total) * 100) : 40;
-
             const elAdv = document.getElementById('lbl-adv-pct');
-
             const elBal = document.getElementById('lbl-bal-pct');
-
             if(elAdv) elAdv.innerText = `Advance (${advPct}%)`;
-
             if(elBal) elBal.innerText = `Balance (${balPct}%)`;
-
         }
-
-
 
         function updatePaymentUI() {
-
             const totalInvoice = Number(document.getElementById('inp-total-val').value) || 0;
-
             const totalReceived = calculateProjectReceived(state.selectedProject);
-
             const pendingAmount = totalInvoice - totalReceived;
 
-
-
             document.getElementById('val-total-received').innerText = formatINR(totalReceived);
-
             document.getElementById('val-total-pending').innerText = formatINR(pendingAmount > 0 ? pendingAmount : 0);
 
-
-
             // Restore tick/cross active states
-
             const btnAdvPend = document.getElementById('btn-adv-pend');
-
             const btnAdvRec = document.getElementById('btn-adv-rec');
-
             const btnBalPend = document.getElementById('btn-bal-pend');
-
             const btnBalRec = document.getElementById('btn-bal-rec');
 
-
-
             if (btnAdvPend) {
-
                 ['btn-adv-pend', 'btn-adv-rec', 'btn-bal-pend', 'btn-bal-rec'].forEach(id => document.getElementById(id).classList.remove('active'));
-
                 
-
                 let advStatus = 'Pending';
-
                 let balStatus = 'Pending';
-
                 state.currentPayments.forEach(pay => {
-
                     if (pay.type === 'Advance' && pay.status === 'Received') advStatus = 'Received';
-
                     if (pay.type === 'Balance' && pay.status === 'Received') balStatus = 'Received';
-
                 });
-
-
 
                 if (advStatus === 'Received') btnAdvRec.classList.add('active');
-
                 else btnAdvPend.classList.add('active');
 
-
-
                 if (balStatus === 'Received') btnBalRec.classList.add('active');
-
                 else btnBalPend.classList.add('active');
-
             }
-
-
 
             const historyList = document.getElementById('revenue-history-list');
-
             if (!historyList) return;
-
             historyList.innerHTML = '';
 
-
-
             const receivedPayments = (state.currentPayments || []).filter(p => p.status === 'Received');
-
             
-
             if (receivedPayments.length === 0) {
-
                 historyList.innerHTML = `<div style="padding: 16px; text-align: center; color: var(--text-muted); font-size: 0.85rem;">No payments recorded yet.</div>`;
-
             } else {
-
                 receivedPayments.sort((a,b) => new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0));
 
-
-
                 receivedPayments.forEach(pay => {
-
                     let amt = Number(pay.expected_amount) || 0;
-
                     if (amt === 0 && pay.type === 'Advance') amt = totalInvoice * 0.6;
-
                     if (amt === 0 && pay.type === 'Balance') amt = totalInvoice * 0.4;
-
                     
-
                     const dateSrc = pay.updated_at || pay.created_at || new Date().toISOString();
-
                     const dateStr = new Date(dateSrc).toLocaleDateString('en-GB', {day: 'numeric', month: 'short', year: 'numeric'});
 
-
-
                     historyList.innerHTML += `
-
                         <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border);">
-
                             <div>
-
                                 <div style="font-weight: 600; color: var(--text-main); font-size: 0.95rem;">${pay.type || 'Payment'}</div>
-
                                 <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 4px;">${dateStr}</div>
-
                             </div>
-
                             <div style="display: flex; align-items: center; gap: 12px;">
-
                                 <div style="text-align: right;">
-
                                     <div style="font-weight: 700; color: var(--success); font-size: 1rem;">${formatINR(amt)}</div>
-
                                 </div>
-
                                 <button class="btn-del" onclick="deletePaymentRecord('${pay.id}')" style="font-size: 1.1rem; color: var(--danger); opacity: 0.8;">×</button>
-
                             </div>
-
                         </div>
-
                     `;
-
                 });
-
             }
-
         }
 
-
-
         async function addPaymentRecord() {
-
             const dateVal = document.getElementById('inp-pay-date').value;
-
             const amountVal = Number(document.getElementById('inp-pay-amount').value);
-
-
 
             if (!amountVal || amountVal <= 0) return showToast("Enter a valid amount");
 
-
-
             const timestamp = dateVal ? new Date(dateVal).toISOString() : new Date().toISOString();
-
             const payType = `Payment ${state.currentPayments.filter(p => p.type && p.type.startsWith('Payment')).length + 1}`;
 
-
-
             const newPay = { 
-
                 project_id: state.selectedProject.id, 
-
                 type: payType, 
-
                 status: 'Received', 
-
                 expected_amount: amountVal,
-
                 updated_at: timestamp
-
             };
 
-
-
             let { data, error } = await supabaseClient.from('payments').insert(newPay).select();
-
             
-
             if (error) {
-
                 // Smart Fallback: Sometimes strict DB columns reject explicit 'updated_at' values. Let's try without it!
-
                 console.warn("DB rejected insert. Retrying without updated_at...", error);
-
                 delete newPay.updated_at;
-
                 const retry = await supabaseClient.from('payments').insert(newPay).select();
-
                 
-
                 if (retry.error) {
-
                     console.error("Retry failed:", retry.error);
-
                     showToast("Saved locally (DB sync failed)");
-
                     // Ensure the UI unblocks and correctly updates "Total Received" locally!
-
                     data = [{ ...newPay, id: Date.now(), updated_at: timestamp }];
-
                 } else {
-
                     data = retry.data;
-
                     showToast("Payment Added ✅");
-
                 }
-
             } else {
-
                 showToast("Payment Added ✅");
-
             }
-
-
 
             if (data && data.length) {
-
                 state.currentPayments.push(data[0]);
-
                 state.selectedProject.payments = state.currentPayments;
-
             }
-
-
 
             document.getElementById('inp-pay-amount').value = '';
-
             
-
             updatePaymentUI();
-
             updateGlobalDashboard();
-
         }
-
-
 
         async function deletePaymentRecord(payId) {
-
             if (!(await customConfirm("Delete this payment record?"))) return;
 
-
-
             await supabaseClient.from('payments').delete().eq('id', payId);
-
             
-
             state.currentPayments = state.currentPayments.filter(p => String(p.id) !== String(payId));
-
             state.selectedProject.payments = state.currentPayments;
 
-
-
             updatePaymentUI();
-
             updateGlobalDashboard();
-
             showToast("Payment Deleted 🗑️");
-
         }
-
-
 
         async function setPaymentStatus(type, status) {
-
             const amt = type === 'Advance' ? Number(document.getElementById('inp-advance-val').value) : Number(document.getElementById('inp-balance-val').value);
-
             let existing = state.currentPayments.find(p => p.type === type);
-
             
-
             const timestamp = new Date().toISOString();
-
             
-
             if (existing) {
-
                 existing.status = status;
-
                 existing.expected_amount = amt;
-
                 existing.updated_at = timestamp;
-
                 await supabaseClient.from('payments').update({ status, expected_amount: amt, updated_at: timestamp }).eq('id', existing.id);
-
             } else {
-
                 const newPay = { project_id: state.selectedProject.id, type, status, expected_amount: amt || 0, updated_at: timestamp };
-
                 const { data } = await supabaseClient.from('payments').insert(newPay).select();
-
                 if(data && data.length) {
-
                     state.currentPayments.push(data[0]);
-
                 }
-
             }
-
             state.selectedProject.payments = state.currentPayments;
-
             updatePaymentUI();
-
             showToast("Payment Status Updated");
-
             updateGlobalDashboard();
-
         }
 
-
-
         // --- ACTUALS TAB LOGIC ---
-
         async function addUnexpectedExpense() {
-
             let rawName = await customPrompt("Enter the name of the unexpected expense (e.g., Damaged Prop):");
-
             if (rawName === null) return;
-
             let cleanName = rawName.trim();
-
             
-
             if (!cleanName) {
-
                 let count = state.customRows.length + 1;
-
                 cleanName = "Unexpected " + count;
-
                 while(state.expensesMap[cleanName]) { count++; cleanName = "Unexpected " + count; }
-
             }
-
-
 
             if (state.expensesMap[cleanName]) return showToast("Expense name already exists!");
 
-
-
             state.expensesMap[cleanName] = { id: null, estimate: 0, actual: null, subItems: [] };
-
             state.customRows.push(cleanName);
-
             renderEstimateExpenses();
-
             renderActualsExpenses();
-
             markDirty();
-
         }
 
-
-
         function updateActualsTotals() {
-
             let totalEstSub = 0;
-
             let totalAct = 0;
 
-
-
             let miscEst = state.expensesMap['Miscellaneous']?.estimate || 0;
-
             let cutEst = state.expensesMap['Company Cut']?.estimate || 0;
 
-
-
             Object.keys(state.expensesMap).forEach(cat => {
-
                 if (cat === 'Company Cut' || cat === 'Miscellaneous') return;
 
-
-
                 const est = state.expensesMap[cat].estimate || 0;
-
                 totalEstSub += est;
-
             });
-
-
 
             // Calculate actual total operational spend
-
             Object.keys(state.expensesMap).forEach(cat => {
-
                 if (cat === 'Company Cut') return; // Completely hide Company Cut from actuals total
 
-
-
                 let act = state.expensesMap[cat].actual;
-
                 const subItems = state.expensesMap[cat].subItems || [];
-
                 const isSplit = subItems.length > 0;
-
                 
-
                 if (act === null || act === undefined || act === '') {
-
                     act = isSplit ? subItems.reduce((s, i) => s + (Number(i.amount)||0), 0) : 0; 
-
                 }
-
                 totalAct += act;
-
             });
-
-
 
             const grandTotalEst = totalEstSub + miscEst + cutEst;
 
-
-
             // Detail Panel update
-
             document.getElementById('act-breakdown-sub').innerText = formatINR(totalEstSub);
-
             document.getElementById('act-breakdown-misc').innerText = formatINR(miscEst);
-
             document.getElementById('act-breakdown-cut').innerText = formatINR(cutEst);
-
             document.getElementById('act-breakdown-grand').innerText = formatINR(grandTotalEst);
 
-
-
             const totalInvoice = Number(document.getElementById('inp-total-val').value) || grandTotalEst;
-
             document.getElementById('act-breakdown-revenue').innerText = formatINR(totalInvoice);
 
-
-
             const diff = totalInvoice - grandTotalEst;
-
             const gstNote = document.getElementById('act-breakdown-gst-note');
-
             if (diff > 0) {
-
                 // If it looks like 18% GST addition
-
                 if (Math.abs(diff - (grandTotalEst * 0.18)) < 10) {
-
                     gstNote.innerText = "+ ₹" + Math.round(diff).toLocaleString('en-IN') + " (18% GST included)";
-
                 } else {
-
                     gstNote.innerText = "+ ₹" + Math.round(diff).toLocaleString('en-IN') + " (Extra adjusted)";
-
                 }
-
                 gstNote.style.color = "var(--success)";
-
             } else if (diff < 0) {
-
                  gstNote.innerText = "- ₹" + Math.round(Math.abs(diff)).toLocaleString('en-IN') + " (Discount applied)";
-
                  gstNote.style.color = "var(--warning)";
-
             } else {
-
                 gstNote.innerText = "Matches Estimate perfectly";
-
                 gstNote.style.color = "var(--text-muted)";
-
             }
-
-
 
             // Summary Panel update (Budget Variance = Grand Total - Actual Spend)
-
             document.getElementById('val-act-spent-total').innerText = formatINR(totalAct);
 
-
-
             const variance = grandTotalEst - totalAct;
-
             const profitEl = document.getElementById('val-realized-profit');
-
             profitEl.innerText = formatINR(variance);
-
             profitEl.style.color = variance >= 0 ? 'var(--success)' : 'var(--danger)';
-
             
-
             const budgetFormulaEl = document.getElementById('act-formula-budget');
-
             if (budgetFormulaEl) {
-
                 budgetFormulaEl.innerText = `(Grand: ${formatINR(grandTotalEst)} - Act: ${formatINR(totalAct)})`;
-
             }
-
         }
-
-
 
         function addSubItem(cat) {
-
             if (!state.expensesMap[cat].subItems) state.expensesMap[cat].subItems = [];
-
             
-
             if (state.expensesMap[cat].subItems.length === 0 && state.expensesMap[cat].actual > 0) {
-
                 state.expensesMap[cat].subItems.push({ name: 'Base Cost', amount: state.expensesMap[cat].actual });
-
             }
-
             state.expensesMap[cat].subItems.push({ name: '', amount: 0 });
-
             recalcActualTotal(cat);
-
             renderActualsExpenses();
-
         }
-
-
 
         function updateSubItemName(cat, idx, val) {
-
             state.expensesMap[cat].subItems[idx].name = val;
-
             markDirty();
-
         }
-
-
 
         function updateSubItemAmount(cat, idx, val) {
-
             state.expensesMap[cat].subItems[idx].amount = Number(val) || 0;
-
             recalcActualTotal(cat);
-
         }
-
-
 
         function deleteSubItem(cat, idx) {
-
             state.expensesMap[cat].subItems.splice(idx, 1);
-
             recalcActualTotal(cat);
-
             renderActualsExpenses();
-
         }
-
-
 
         function recalcActualTotal(cat) {
-
             const subs = state.expensesMap[cat].subItems || [];
-
             if (subs.length > 0) {
-
                 const total = subs.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-
                 state.expensesMap[cat].actual = total;
-
                 
-
                 const safeCat = cat.replace(/[^a-zA-Z0-9]/g, '_');
-
                 const baseInput = document.getElementById(`act-input-${safeCat}`);
-
                 if (baseInput) baseInput.value = total === 0 ? '' : total;
-
             }
-
             updateActualsTotals();
-
             markDirty();
-
         }
-
-
 
         function renderActualsExpenses() {
-
             const container = document.getElementById('act-expenses-container');
-
             container.innerHTML = '';
 
-
-
             const sortedKeys = Object.keys(state.expensesMap).sort((a,b) => {
-
                 if(a==='Company Cut') return 1; if(b==='Company Cut') return -1;
-
                 if(a==='Miscellaneous') return 1; if(b==='Miscellaneous') return -1;
-
                 return 0;
-
             });
-
-
 
             sortedKeys.forEach(cat => {
-
                 if (cat === 'Company Cut') return; // Completely hide Company Cut from actuals
 
-
-
                 const est = state.expensesMap[cat].estimate || 0;
-
                 let act = state.expensesMap[cat].actual;
-
                 const subItems = state.expensesMap[cat].subItems || [];
-
                 const isSplit = subItems.length > 0;
-
                 
-
                 // Allow empty inputs natively & Convert 0 to blank
-
                 let displayAct = act;
-
                 if (displayAct === null || displayAct === undefined) {
-
                     displayAct = isSplit ? subItems.reduce((s, i) => s + (Number(i.amount)||0), 0) : ''; 
-
                 } 
-
                 
-
                 if (displayAct === 0 && !isSplit) {
-
                     displayAct = ''; 
-
                 }
-
-
 
                 if (est > 0 || act !== null || isSplit || state.customRows.includes(cat)) {
-
                     
-
                     const mainWrap = document.createElement('div');
-
                     
-
                     const row = document.createElement('div');
-
                     row.className = 'expense-row actual-mode';
-
                     if (isSplit) row.style.marginBottom = '0';
-
                     
-
                     let labelHtml = `<div>
-
                         <label>${cat}</label>
-
                         <div class="est-label">Est: ${formatINR(est)}</div>
-
                     </div>`;
-
                     
-
                     let delBtn = '<div></div>';
-
                     if (state.customRows.includes(cat)) {
-
                         delBtn = `<button class="btn-del" onclick="deleteExpense('${cat}')">×</button>`;
-
                     }
-
-
 
                     let splitBtn = `<button class="btn-split" onclick="addSubItem('${cat}')">⑆ Split</button>`;
-
                     
-
                     const safeCat = cat.replace(/[^a-zA-Z0-9]/g, '_');
-
                     
-
                     let actualInputHtml = isSplit ? 
-
                         `<input type="number" id="act-input-${safeCat}" class="expense-input" value="${displayAct}" readonly style="color: var(--warning); opacity: 0.6;" title="Calculated from splits" placeholder="0">` : 
-
                         `<input type="number" id="act-input-${safeCat}" class="expense-input" value="${displayAct}" oninput="updateActualMap('${cat}', this.value)" style="color: var(--warning);" placeholder="0">`;
 
-
-
                     row.innerHTML = `
-
                         ${labelHtml}
-
                         ${splitBtn}
-
                         <div class="expense-input-wrapper" style="border: 1px solid rgba(245, 158, 11, 0.4); background: rgba(0,0,0,0.3);">
-
                             <span style="color: var(--warning);">₹</span>${actualInputHtml}
-
                         </div>
-
                         ${delBtn}
-
                     `;
-
                     mainWrap.appendChild(row);
 
-
-
                     if (isSplit) {
-
                         const subContainer = document.createElement('div');
-
                         subContainer.className = 'sub-expense-container';
-
                         
-
                         let subHtml = '';
-
                         subItems.forEach((sub, idx) => {
-
                             const displaySubAmt = sub.amount === 0 ? '' : sub.amount;
-
                             subHtml += `
-
                                 <div class="sub-expense-row">
-
                                     <input type="text" value="${sub.name}" oninput="updateSubItemName('${cat}', ${idx}, this.value)" placeholder="Sub-item name" style="background: transparent; border: none; color: var(--text-muted); font-size: 0.85rem; padding: 4px;">
-
                                     <div class="expense-input-wrapper" style="background: rgba(0,0,0,0.3); padding: 2px 6px;">
-
                                         <span style="color: var(--warning); font-size: 0.75rem;">₹</span>
-
                                         <input type="number" value="${displaySubAmt}" oninput="updateSubItemAmount('${cat}', ${idx}, this.value)" style="color: var(--warning); padding: 2px; font-size: 0.85rem;" placeholder="0">
-
                                     </div>
-
                                     <button class="btn-del" onclick="deleteSubItem('${cat}', ${idx})" style="font-size: 1rem;">×</button>
-
                                 </div>
-
                             `;
-
                         });
-
                         subContainer.innerHTML = subHtml;
-
                         mainWrap.appendChild(subContainer);
-
                     }
-
-
 
                     container.appendChild(mainWrap);
-
                 }
-
             });
 
-
-
             updateActualsTotals();
-
         }
-
-
 
         function updateActualMap(cat, val) {
-
             if(!state.expensesMap[cat]) state.expensesMap[cat] = {id:null, estimate:0, actual:null, subItems:[]};
-
             // Map empty strings explicitly back to null
-
             state.expensesMap[cat].actual = val === '' ? null : Number(val);
-
             updateActualsTotals();
-
             markDirty();
-
         }
-
-
 
         async function clearAllActuals() {
-
             if (!(await customConfirm("Are you sure you want to revert? This will reset all actual spent amounts to zero."))) return;
 
-
-
             Object.keys(state.expensesMap).forEach(cat => {
-
                 state.expensesMap[cat].actual = null;
-
                 state.expensesMap[cat].subItems = [];
-
             });
 
-
-
             renderActualsExpenses();
-
             updateActualsTotals();
-
             
-
             await saveProjectData('CLEAR', "Actuals reverted successfully! 🗑️");
-
         }
 
-
-
         // --- UNIFIED SAVE LOGIC ---
-
         async function saveProjectData(tabSource, successMsg = "Project Data Synced!") {
-
             const p = state.selectedProject;
-
             if (!p) return;
-
             
-
             const dateVal = document.getElementById('inp-date').value;
-
             let monthName = p.month_name;
-
             if(dateVal) {
-
                 const parts = dateVal.split('-'); 
-
                 if (parts.length === 3) monthName = monthsList[parseInt(parts[1], 10) - 1];
-
             }
-
-
 
             const totalVal = Number(document.getElementById('inp-total-val').value) || 0;
-
             
-
             // Only if the user explicitly clicked "Sync Actuals" (ACT) do we formalize empty ones into permanent Actuals
-
             if (tabSource === 'ACT') {
-
                 for (let cat in state.expensesMap) {
-
                     if (state.expensesMap[cat].actual === null && (!state.expensesMap[cat].subItems || state.expensesMap[cat].subItems.length === 0)) {
-
                         state.expensesMap[cat].actual = state.expensesMap[cat].estimate;
-
                     }
-
                 }
-
                 renderActualsExpenses(); // visually update
-
             }
-
-
 
             if (tabSource === 'REV') {
-
                 const advVal = Number(document.getElementById('inp-advance-val').value) || 0;
-
                 const balVal = Number(document.getElementById('inp-balance-val').value) || 0;
-
                 
-
                 if (!p.payments) p.payments = [];
-
                 
-
                 let advPay = p.payments.find(x => x.type === 'Advance');
-
                 if (advPay) {
-
                     await supabaseClient.from('payments').update({ expected_amount: advVal }).eq('id', advPay.id);
-
                     advPay.expected_amount = advVal;
-
                 } else {
-
                     const { data } = await supabaseClient.from('payments').insert({ project_id: p.id, type: 'Advance', status: 'Pending', expected_amount: advVal }).select();
-
                     if (data && data.length) p.payments.push(data[0]);
-
                 }
-
-
 
                 let balPay = p.payments.find(x => x.type === 'Balance');
-
                 if (balPay) {
-
                     await supabaseClient.from('payments').update({ expected_amount: balVal }).eq('id', balPay.id);
-
                     balPay.expected_amount = balVal;
-
                 } else {
-
                     const { data } = await supabaseClient.from('payments').insert({ project_id: p.id, type: 'Balance', status: 'Pending', expected_amount: balVal }).select();
-
                     if (data && data.length) p.payments.push(data[0]);
-
                 }
-
             }
-
             
-
             await supabaseClient.from('projects').update({
-
                 date: dateVal,
-
                 month_name: monthName,
-
                 days: document.getElementById('inp-days').value,
-
                 actors: document.getElementById('inp-actors').value,
-
                 videos: document.getElementById('inp-videos').value,
-
                 photos: document.getElementById('inp-photos').value,
-
                 category: p.category,
-
                 total_value: totalVal
-
             }).eq('id', p.id);
-
             
-
             p.total_value = totalVal; 
-
             p.date = dateVal;
-
             p.month_name = monthName;
-
-
 
             const updatedExpenses = []; 
 
-
-
             for (let cat in state.expensesMap) {
-
                 const data = state.expensesMap[cat];
-
                 
-
                 if (data.estimate > 0 || data.actual !== null || (data.subItems && data.subItems.length > 0)) {
-
                     if (data.id) {
-
                         await supabaseClient.from('expenses').update({ 
-
                             amount: data.estimate, 
-
                             actual_amount: data.actual,
-
                             description: JSON.stringify(data.subItems)
-
                         }).eq('id', data.id);
-
                         
-
                         updatedExpenses.push({
-
                             id: data.id,
-
                             project_id: p.id,
-
                             category_name: cat,
-
                             amount: data.estimate,
-
                             actual_amount: data.actual,
-
                             description: JSON.stringify(data.subItems)
-
                         });
-
                     } else {
-
                         const { data: inserted } = await supabaseClient.from('expenses').insert({
-
                             project_id: p.id, 
-
                             category_name: cat, 
-
                             amount: data.estimate, 
-
                             actual_amount: data.actual,
-
                             description: JSON.stringify(data.subItems)
-
                         }).select();
-
                         if (inserted && inserted.length > 0) {
-
                             data.id = inserted[0].id;
-
                             updatedExpenses.push(inserted[0]);
-
                         }
-
                     }
-
                 } else if (data.id && data.estimate === 0 && (data.actual === null || data.actual === 0) && (!data.subItems || data.subItems.length === 0)) {
-
                      await supabaseClient.from('expenses').delete().eq('id', data.id);
-
                      data.id = null;
-
                 }
-
             }
-
-
 
             p.expenses = updatedExpenses; 
 
-
-
             state.isDirty = false;
-
             showToast(successMsg);
-
             
-
             updateGlobalDashboard();
-
         }
 
-
-
         // ============================================================
-
         // VIEW 7: PAYMENTS HUB
-
         // ============================================================
-
         function renderPayments() {
-
             const list = document.getElementById('payments-list');
-
             list.innerHTML = '';
-
             
-
             let pendingHtml = '';
-
             let receivedHtml = '';
-
             let totalPending = 0;
-
             let totalReceivedGlobal = 0;
 
-
-
             const dashMonth = document.getElementById('global-month-filter').value;
-
             const dashMonthIdx = monthsList.indexOf(dashMonth);
 
-
-
             state.dbProjects.forEach(p => {
-
                 if (!inSelectedYear(p.date)) return;
-
                 if (p.status !== 'Confirmed' && p.status !== 'Completed') return;
 
-
-
                 const clientName = state.dbClients.find(c => String(c.id) === String(p.client_id))?.name || 'Unknown';
-
                 const totalVal = getProjectTotal(p);
-
                 const projReceived = calculateProjectReceived(p);
-
                 const pendAmt = totalVal - projReceived;
 
-
-
                 const pMonthIdx = monthsList.indexOf(p.month_name);
-
                 const isCurrentMonthOrAll = (dashMonth === 'All' || p.month_name === dashMonth);
-
                 const isPastPending = (dashMonth !== 'All' && pMonthIdx < dashMonthIdx && pendAmt > 0);
 
-
-
                 if ((isCurrentMonthOrAll || isPastPending) && pendAmt > 0) {
-
                     totalPending += pendAmt;
-
                     pendingHtml += createPendingCard(p, clientName, pendAmt);
-
                 }
-
-
 
                 if (p.payments && isCurrentMonthOrAll) {
-
                     p.payments.forEach(pay => {
-
                         if (pay.status === 'Received') {
-
                             let amt = Number(pay.expected_amount) || 0;
-
                             if (amt === 0 && pay.type === 'Advance') amt = totalVal * 0.6;
-
                             if (amt === 0 && pay.type === 'Balance') amt = totalVal * 0.4;
-
                             
-
                             totalReceivedGlobal += amt;
-
                             receivedHtml += createReceivedCard(p, clientName, pay, amt);
-
                         }
-
                     });
-
                 }
-
             });
 
-
-
             list.innerHTML = `
-
                 <div style="margin-bottom: 24px;">
-
                     <h2 style="color: var(--warning); display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border); padding-bottom: 8px;">
-
                         <span>⏳ PENDING PAYMENTS</span>
-
                         <span>${formatINR(totalPending)}</span>
-
                     </h2>
-
                     <div style="display:flex; flex-direction:column; gap:10px; margin-top:12px;">
-
                         ${pendingHtml || '<div style="color: var(--text-muted); font-size: 0.85rem; padding: 10px; text-align: center; background: rgba(0,0,0,0.2); border-radius: 12px;">All caught up! No pending payments. 🎉</div>'}
-
                     </div>
-
                 </div>
-
                 <div>
-
                     <h2 style="color: var(--success); display: flex; justify-content: space-between; border-bottom: 1px dashed var(--border); padding-bottom: 8px;">
-
                         <span>✅ RECEIVED PAYMENTS</span>
-
                         <span>${formatINR(totalReceivedGlobal)}</span>
-
                     </h2>
-
                     <div style="display:flex; flex-direction:column; gap:10px; margin-top:12px;">
-
                         ${receivedHtml || '<div style="color: var(--text-muted); font-size: 0.85rem; padding: 10px; text-align: center; background: rgba(0,0,0,0.2); border-radius: 12px;">No received payments yet for this period.</div>'}
-
                     </div>
-
                 </div>
-
             `;
-
         }
-
-
 
         function createPendingCard(project, clientName, amount) {
-
             let actionBtn = `<button onclick="quickAddFullPayment('${project.id}', ${amount})" style="background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid var(--success); padding: 6px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer; margin-top: 10px; transition: 0.2s;">Mark Balance Received ✔</button>`;
-
             
-
             return `
-
             <div style="background: var(--bg-card); border: 1px solid var(--warning); box-shadow: 0 4px 15px rgba(245, 158, 11, 0.1); border-radius: 16px; padding: 16px; display: flex; justify-content: space-between; align-items: flex-start; transition: 0.2s;">
-
                 <div>
-
                     <div style="font-weight: 700; font-size: 1.05rem; margin-bottom: 4px;">${project.name}</div>
-
                     <div style="font-size: 0.8rem; color: var(--text-muted);">${clientName} • Pending Balance</div>
-
                     <div style="margin-top: 4px;">${actionBtn}</div>
-
                 </div>
-
                 <div style="text-align: right; font-weight: 800; font-size: 1.2rem; color: var(--warning);">
-
                     ${formatINR(amount)}
-
                 </div>
-
             </div>`;
-
         }
-
-
 
         function createReceivedCard(project, clientName, payment, amount) {
-
             const dateSrc = payment.updated_at || payment.created_at || new Date().toISOString();
-
             const dateStr = new Date(dateSrc).toLocaleDateString('en-GB', {day: 'numeric', month: 'short', year: 'numeric'});
 
-
-
             return `
-
             <div style="background: var(--bg-card); border: 1px solid var(--success); box-shadow: none; border-radius: 16px; padding: 16px; display: flex; justify-content: space-between; align-items: flex-start; transition: 0.2s;">
-
                 <div>
-
                     <div style="font-weight: 700; font-size: 1.05rem; margin-bottom: 4px;">${project.name}</div>
-
                     <div style="font-size: 0.8rem; color: var(--text-muted);">${clientName} • ${payment.type || 'Payment'}</div>
-
                     <div style="font-size: 0.7rem; color: var(--success); background: rgba(16,185,129,0.1); padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 6px; font-weight: 600;">Paid on ${dateStr}</div>
-
                 </div>
-
                 <div style="text-align: right; font-weight: 800; font-size: 1.2rem; color: var(--success);">
-
                     ${formatINR(amount)}
-
                 </div>
-
             </div>`;
-
         }
 
-
-
         async function quickAddFullPayment(projectId, amount) {
-
             const p = state.dbProjects.find(proj => String(proj.id) === String(projectId));
-
             if (!p) return;
-
-
 
             const payType = `Payment ${p.payments ? p.payments.filter(x => x.status === 'Received').length + 1 : 1}`;
 
-
-
             const newPay = { 
-
                 project_id: projectId, 
-
                 type: payType, 
-
                 status: 'Received', 
-
                 expected_amount: amount,
-
                 updated_at: new Date().toISOString()
-
             };
-
             
-
             const { data } = await supabaseClient.from('payments').insert(newPay).select();
-
             if(data && data.length) {
-
                 if(!p.payments) p.payments = [];
-
                 p.payments.push(data[0]);
-
             }
-
             
-
             showToast("Marked as Paid! ✅");
-
             renderPayments();
-
             updateGlobalDashboard();
-
         }
 
-
-
         // ============================================================
-
         // VIEW 8: SHOOT CALENDAR (GRID UI)
-
         // ============================================================
-
         function renderCalendarView() {
-
             const calUi = document.getElementById('calendar-ui');
-
             const listUi = document.getElementById('calendar-projects-list');
-
             const listTitle = document.getElementById('calendar-list-title');
 
-
-
             const eventDates = new Set();
-
             const projectMap = {}; 
-
             
-
             state.dbProjects.forEach(p => {
-
                 if (p.status === 'Dropped' || p.status === 'Estimate' || !p.date) return;
-
                 
-
                 const parts = p.date.split('-');
-
                 if (parts.length !== 3) return;
-
                 const start = new Date(parts[0], parts[1] - 1, parts[2]);
-
                 const days = parseInt(p.days) || 1;
-
                 
-
                 for(let i=0; i<days; i++) {
-
                     const d = new Date(start);
-
                     d.setDate(d.getDate() + i);
-
                     
-
                     const dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-
                     eventDates.add(dStr);
-
                     
-
                     if(!projectMap[dStr]) projectMap[dStr] = [];
-
                     projectMap[dStr].push(p);
-
                 }
-
             });
 
-
-
             const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-
             const headerHtml = `
-
                 <div class="cal-header">
-
                     <h3>${monthNames[state.calMonth]} ${state.calYear}</h3>
-
                     <div style="display:flex; gap:8px;">
-
                         <button class="cal-nav-btn" onclick="changeCalMonth(-1)">&#10094;</button>
-
                         <button class="cal-nav-btn" onclick="changeCalMonth(1)">&#10095;</button>
-
                     </div>
-
                 </div>
-
             `;
 
-
-
             const dayNames = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
-
             let gridHtml = `<div class="cal-grid">`;
-
             dayNames.forEach(d => gridHtml += `<div class="cal-day-name">${d}</div>`);
 
-
-
             const firstDay = new Date(state.calYear, state.calMonth, 1).getDay();
-
             const daysInMonth = new Date(state.calYear, state.calMonth + 1, 0).getDate();
-
             let startOffset = firstDay === 0 ? 6 : firstDay - 1; 
 
-
-
             for (let i = 0; i < startOffset; i++) {
-
                 gridHtml += `<div class="cal-day empty"></div>`;
-
             }
-
-
 
             const today = new Date();
-
             const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 
-
-
             for (let i = 1; i <= daysInMonth; i++) {
-
                 const localDStr = `${state.calYear}-${String(state.calMonth+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
-
                 
-
                 let classes = 'cal-day';
-
                 if (localDStr === todayStr) classes += ' today';
-
                 if (eventDates.has(localDStr)) classes += ' has-event';
-
                 if (state.calSelectedDate === localDStr) classes += ' selected';
 
-
-
                 gridHtml += `<div class="${classes}" onclick="selectCalDate('${localDStr}')">${i}</div>`;
-
             }
-
             gridHtml += `</div>`;
-
             calUi.innerHTML = headerHtml + gridHtml;
 
-
-
             listUi.innerHTML = '';
-
             let displayProjects = [];
-
             
-
             if (state.calSelectedDate) {
-
                 listTitle.innerText = `Shoots on ${new Date(state.calSelectedDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`;
-
                 displayProjects = projectMap[state.calSelectedDate] || [];
-
             } else {
-
                 listTitle.innerText = `All ${monthNames[state.calMonth]} Shoots`;
-
                 Object.keys(projectMap).forEach(dStr => {
-
                     if(dStr.startsWith(`${state.calYear}-${String(state.calMonth+1).padStart(2,'0')}`)) {
-
                         displayProjects.push(...projectMap[dStr]);
-
                     }
-
                 });
-
                 displayProjects = [...new Set(displayProjects)]; 
-
             }
-
-
 
             displayProjects.sort((a,b) => new Date(a.date) - new Date(b.date));
 
-
-
             if (displayProjects.length === 0) {
-
                 listUi.innerHTML = `<div style="text-align:center; color: var(--text-muted); padding: 20px; background: rgba(0,0,0,0.2); border-radius: 12px;">No shoots scheduled.</div>`;
-
                 return;
-
             }
 
-
-
             displayProjects.forEach(p => {
-
                 const clientName = state.dbClients.find(c => String(c.id) === String(p.client_id))?.name || 'Unknown';
-
                 
-
                 const parts = p.date.split('-');
-
                 const pDate = new Date(parts[0], parts[1] - 1, parts[2]);
-
                 const dateStr = pDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-
                 
-
                 let projStatus = '';
-
                 if(p.status === 'Estimate') projStatus = '🟡 Estimate';
-
                 else if(p.status === 'Confirmed') projStatus = '🟢 Confirmed';
-
                 else if(p.status === 'Completed') projStatus = '🔵 Completed';
-
-
 
                 let multiDayText = parseInt(p.days) > 1 ? ` • ${p.days} Days` : '';
 
-
-
                 const div = document.createElement('div');
-
                 div.className = 'card';
-
                 div.innerHTML = `
-
                     <div style="flex: 1;">
-
                         <div style="font-weight:700; font-size: 1.05rem; margin-bottom: 4px;">${p.name}</div>
-
                         <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;">${clientName} • ${projStatus}</div>
-
                         <div style="font-weight: 800; color: var(--info); font-size: 0.85rem;">
-
                             📅 ${dateStr} ${multiDayText}
-
                         </div>
-
                     </div>
-
                     <div style="display:flex; align-items:center;">
-
                         <span style="color:var(--primary); font-size:1.2rem; margin-left: 5px;">›</span>
-
                     </div>
-
                 `;
-
                 div.onclick = () => { openProjectDetails(p, 'EST'); }; 
-
                 listUi.appendChild(div);
-
             });
-
         }
-
-
 
         function changeCalMonth(dir) {
-
             state.calMonth += dir;
-
             if (state.calMonth < 0) { state.calMonth = 11; state.calYear--; }
-
             if (state.calMonth > 11) { state.calMonth = 0; state.calYear++; }
-
             state.calSelectedDate = null; 
-
             renderCalendarView();
-
         }
-
-
 
         function selectCalDate(dStr) {
-
             if (state.calSelectedDate === dStr) {
-
                 state.calSelectedDate = null; 
-
             } else {
-
                 state.calSelectedDate = dStr;
-
             }
-
             renderCalendarView();
-
         }
-
-
 
         // --- UTILS & MODALS ---
-
         function openModal(id) { document.getElementById(id).classList.add('open'); }
-
         function closeModal(id) { 
-
             if(id) {
-
                 document.getElementById(id).classList.remove('open');
-
             } else {
-
                 document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('open')); 
-
             }
-
         }
-
         function showToast(msg) {
-
             const t = document.getElementById('toast');
-
             t.innerText = msg; t.classList.add('show');
-
             setTimeout(() => t.classList.remove('show'), 2500);
-
         }
-
-
 
         async function submitNewClient() {
-
             const name = document.getElementById('modal-client-name').value;
-
             const pName = document.getElementById('modal-project-name').value;
-
             if (!name || !pName) return;
 
-
-
             const dateStr = new Date().toISOString().split('T')[0];
-
             const monthName = (state.selectedMonth && state.selectedMonth !== 'All') ? state.selectedMonth : monthsList[new Date().getMonth()];
-
-
 
             const { data: c } = await supabaseClient.from('clients').insert({ name }).select().single();
-
             await supabaseClient.from('projects').insert({
-
                 client_id: c.id, name: pName, month_name: monthName,
-
                 category: 'PROMOTIONAL', days: 1, date: dateStr, status: 'Estimate'
-
             });
-
             closeModal('modal-client');
-
             
-
             const { data: clients } = await supabaseClient.from('clients').select('*');
-
             const { data: projects } = await supabaseClient.from('projects').select('*, expenses(id, category_name, amount, actual_amount, description), payments(*)');
-
             state.dbClients = clients; state.dbProjects = projects;
-
             
-
             renderClients();
-
             showToast("Client Created");
-
         }
-
-
 
         async function submitNewProject() {
-
             const name = document.getElementById('modal-work-name').value;
-
             if (!name) return;
-
             
-
             const dateStr = new Date().toISOString().split('T')[0];
-
             const monthName = (state.selectedMonth && state.selectedMonth !== 'All') ? state.selectedMonth : monthsList[new Date().getMonth()];
 
-
-
             await supabaseClient.from('projects').insert({
-
                 client_id: state.selectedClient.id, name: name, month_name: monthName,
-
                 category: 'PROMOTIONAL', days: 1, date: dateStr, status: 'Estimate'
-
             });
-
             closeModal('modal-project');
-
             
-
             const { data: projects } = await supabaseClient.from('projects').select('*, expenses(id, category_name, amount, actual_amount, description), payments(*)');
-
             state.dbProjects = projects;
-
             
-
             renderClients(); 
-
             const filteredProjects = state.dbProjects.filter(p => inSelectedYear(p.date));
-
             renderProjects(filteredProjects);
-
             showToast("Project Created");
-
         }
-
-
 
         async function handleDeleteClient(id) {
-
             if (!(await customConfirm("Delete this client and all projects?"))) return;
-
             await supabaseClient.from('clients').delete().eq('id', id);
-
             state.dbClients = state.dbClients.filter(c => c.id !== id);
-
             renderClients();
-
         }
-
-
 
         async function handleDeleteCurrentProject() {
-
             if (!(await customConfirm("Delete this project?"))) return;
-
             await supabaseClient.from('projects').delete().eq('id', state.selectedProject.id);
-
             state.dbProjects = state.dbProjects.filter(p => p.id !== state.selectedProject.id);
-
             router('clients'); 
-
         }
 
-
-
     </script>
-
 </body>
-
 </html>
-
-
-
-
-
-ok now you please make those changes in this code (dont make any other changes ) and give me 
